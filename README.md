@@ -3,15 +3,11 @@
 
 Engineer turned AI/ML researcher and DevOps practitioner with a background in Materials Engineering and Computing. Passionate about building intelligent systems, automating infrastructure, and contributing to applied research in computer vision, NLP, quantum computing, and algorithms.
 
-📧 olagunjukayode66@yahoo.com  
-📞 +2348134581724  
-🌍 Nigeria | Open to global remote roles  
-🔗 [GitHub](https://github.com/olagunju) | [LinkedIn](https://www.linkedin.com/in/yourname)
 
 ---
 
 ## 🧠 Areas of Focus
-
+- Advance Materials
 - Artificial Intelligence / Machine Learning
 - DevOps and Cloud Automation
 - Computer Vision & NLP
@@ -25,6 +21,9 @@ Engineer turned AI/ML researcher and DevOps practitioner with a background in Ma
 **Smart Wi-Fi Attendance System**  
 Real-time attendance tracking using Wi-Fi signals and a mobile app.  
 _Java | Firebase | Android Studio_
+
+**Mathematical Modeling of Age-Related Disease Risk Using Convolutional Neural Networks and Compartmental Differential Equations**
+Using Mathematical theory like DE to estimate the growth of a diseases. Its still a proposal to combine CNN and DE for the model.
 
 **Age Estimation with CNNs**  
 Trained a convolutional neural network to predict age from facial images.  
