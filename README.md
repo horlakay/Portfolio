@@ -1,4 +1,67 @@
 # Portfolio
+# Olabisi Olagunju
+
+Engineer turned AI/ML researcher and DevOps practitioner with a background in Materials Engineering and Computing. Passionate about building intelligent systems, automating infrastructure, and contributing to applied research in computer vision, NLP, quantum computing, and algorithms.
+
+📧 olagunjukayode66@yahoo.com  
+📞 +2348134581724  
+🌍 Nigeria | Open to global remote roles  
+🔗 [GitHub](https://github.com/olagunju) | [LinkedIn](https://www.linkedin.com/in/yourname)
+
+---
+
+## 🧠 Areas of Focus
+
+- Artificial Intelligence / Machine Learning
+- DevOps and Cloud Automation
+- Computer Vision & NLP
+- Quantum Computing and Algorithms
+- Networking and Operating Systems
+
+---
+
+## 🚀 Selected Projects
+
+**Smart Wi-Fi Attendance System**  
+Real-time attendance tracking using Wi-Fi signals and a mobile app.  
+_Java | Firebase | Android Studio_
+
+**Age Estimation with CNNs**  
+Trained a convolutional neural network to predict age from facial images.  
+_Python | TensorFlow | OpenCV_
+
+**Voice-Controlled Switch Using RNN**  
+Built an Arduino-based switch activated by voice commands processed with an LSTM model.  
+_Arduino | PyTorch | Audio Processing_
+
+**DevOps Deployment Pipeline**  
+Cloud-native CI/CD pipeline using Terraform, GCP, and GitHub Actions.  
+_Terraform | GCP | Docker_
+
+**Satellite Image Annotation**  
+Labeled building types in satellite imagery for AI training datasets.  
+_SuperAnnotate_
+
+---
+
+## 📚 Writing & Research
+
+- Age Estimation Using CNN – [PGD Thesis Summary](#)
+- Quantum Algorithms: [Bridging Material and Digital Worlds](#)
+- Smart Systems for Human Presence Detection – [Whitepaper](#)
+
+---
+
+## 🧾 Resume & Skills
+
+**Languages**: Python, C, C++, Java  
+**Frameworks**: PyTorch, TensorFlow, OpenCV  
+**Cloud & Tools**: GCP, Azure, Terraform, CI/CD, Docker  
+**Certifications**: ALX Software Engineering, GADS Mentor (Cloud)  
+📄 [Download Resume (PDF)](#)
+
+---
+
 <h1 align="center">👋 Hi, I'm Olabisi Olagunju</h1>
 <p align="center">
   🎓 Engineer • 🧠 AI/ML Enthusiast • ☁️ DevOps & Cloud • 🔬 Researcher • 💡 Quantum Curious
