@@ -1,5 +1,5 @@
 output "registry_id" {
-  value = one(values(aws_ecr_repository.repos)).registry_id
+  value = try(values(aws_ecr_repository.repos)[0].registry_id, null)
 }
 
 output "repository_urls" {
