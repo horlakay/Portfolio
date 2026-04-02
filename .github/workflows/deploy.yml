@@ -54,7 +54,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Scan pushed image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.33.1
         with:
           image-ref: ${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:${{ github.sha }}
           format: table
