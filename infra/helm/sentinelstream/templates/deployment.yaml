@@ -1,0 +1,114 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.enabled }}
+{{- $serviceAccount := default $root.Values.serviceDefaults.serviceAccount $svc.serviceAccount }}
+{{- $resources := default $root.Values.serviceDefaults.resources $svc.resources }}
+{{- $probes := default $root.Values.serviceDefaults.probes $svc.probes }}
+{{- $podAnnotations := default $root.Values.global.podAnnotations $svc.podAnnotations }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sentinelstream.serviceName" (dict "root" $root "name" $name) }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "sentinelstream.labels" $root | nindent 4 }}
+    {{- include "sentinelstream.selectorLabels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  replicas: {{ default 1 $svc.replicas }}
+  selector:
+    matchLabels:
+      {{- include "sentinelstream.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+  template:
+    metadata:
+      labels:
+        {{- include "sentinelstream.selectorLabels" $root | nindent 8 }}
+        app.kubernetes.io/component: {{ $name }}
+      annotations:
+        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
+        checksum/secret: {{ default (include (print $root.Template.BasePath "/secret.yaml") $root | sha256sum) $root.Values.secrets.rolloutChecksum }}
+        {{- with $podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "sentinelstream.serviceAccountName" (dict "root" $root "name" $name "service" $svc) }}
+      {{- with $root.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $root.Values.global.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ default $root.Values.serviceDefaults.terminationGracePeriodSeconds $svc.terminationGracePeriodSeconds }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "sentinelstream.serviceImage" (dict "root" $root "name" $name "service" $svc) }}
+          imagePullPolicy: {{ $root.Values.global.imagePullPolicy }}
+          securityContext:
+            {{- toYaml $root.Values.global.containerSecurityContext | nindent 12 }}
+          {{- with $svc.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $svc.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $svc.port }}
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "sentinelstream.configName" $root }}
+            - secretRef:
+                name: {{ include "sentinelstream.secretName" $root }}
+          env:
+            - name: SERVICE_NAME
+              value: {{ $name | quote }}
+            - name: SERVICE_PORT
+              value: {{ $svc.port | quote }}
+            {{- with $svc.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ $probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ $probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ $probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ $probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ $probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ $probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ $probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ $probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ $probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ $probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml $resources | nindent 12 }}
+          volumeMounts:
+            - name: prometheus-multiproc
+              mountPath: {{ $root.Values.global.prometheusMultiprocDir }}
+      volumes:
+        - name: prometheus-multiproc
+          emptyDir: {}
+      {{- with $svc.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $svc.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $svc.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+{{- end }}
+{{- end }}

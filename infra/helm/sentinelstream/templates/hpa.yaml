@@ -1,0 +1,30 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- $hpa := default $root.Values.serviceDefaults.hpa $svc.hpa }}
+{{- if and $svc.enabled $hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "sentinelstream.serviceName" (dict "root" $root "name" $name) }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "sentinelstream.labels" $root | nindent 4 }}
+    {{- include "sentinelstream.selectorLabels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "sentinelstream.serviceName" (dict "root" $root "name" $name) }}
+  minReplicas: {{ $hpa.minReplicas }}
+  maxReplicas: {{ $hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $hpa.targetCPUUtilizationPercentage }}
+---
+{{- end }}
+{{- end }}

@@ -1,0 +1,22 @@
+{
+  "active_model": "fraud-gbt",
+  "report": {
+    "generated_at": "2026-04-01T10:00:00Z",
+    "metrics": [
+      {
+        "feature_name": "failed_login_count_5m",
+        "training_mean": 1.18,
+        "live_mean": 1.26,
+        "population_stability_index": 0.0342,
+        "alert": false
+      },
+      {
+        "feature_name": "baseline_amount_deviation",
+        "training_mean": 1.92,
+        "live_mean": 3.81,
+        "population_stability_index": 0.2874,
+        "alert": true
+      }
+    ]
+  }
+}

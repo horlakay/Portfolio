@@ -1,0 +1,23 @@
+{
+  "risk_score": 0.9421,
+  "confidence": 0.8842,
+  "model_name": "fraud-gbt",
+  "model_version": "20260401091500",
+  "shadow_enabled": true,
+  "candidate_model_name": "fraud-rf-shadow",
+  "candidate_risk_score": 0.7812,
+  "candidate_confidence": 0.5624,
+  "divergence": true,
+  "contributions": [
+    {
+      "feature_name": "baseline_amount_deviation",
+      "contribution": 1.93
+    },
+    {
+      "feature_name": "password_reset_recent_flag",
+      "contribution": 0.54
+    }
+  ],
+  "evaluated_at": "2026-04-01T08:06:02Z"
+}
+

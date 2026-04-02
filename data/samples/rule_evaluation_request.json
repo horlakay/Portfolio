@@ -1,0 +1,21 @@
+{
+  "event": {
+    "event_id": "33333333-3333-4333-8333-333333333333",
+    "event_type": "transaction_initiated",
+    "timestamp": "2026-04-01T08:06:00Z",
+    "user_id": "user-1001",
+    "account_id": "acct-1001",
+    "session_id": "sess-txn-1",
+    "device_id": "device-new-london",
+    "amount": 3250.0,
+    "currency": "USD"
+  },
+  "features": {
+    "failed_login_count_5m": 6,
+    "new_device_flag": true,
+    "new_region_flag": true,
+    "password_reset_recent_flag": true,
+    "baseline_amount_deviation": 12.5135,
+    "session_anomaly_score": 0.8
+  }
+}

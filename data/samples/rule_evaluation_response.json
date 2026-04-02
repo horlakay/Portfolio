@@ -1,0 +1,19 @@
+{
+  "hits": [
+    {
+      "rule_id": "R006",
+      "name": "password_reset_then_high_value_transfer",
+      "severity": "critical",
+      "decision": "deny",
+      "explanation": "Recent password reset immediately followed by a large transaction."
+    },
+    {
+      "rule_id": "R010",
+      "name": "anomalous_amount_vs_baseline",
+      "severity": "high",
+      "decision": "manual_review",
+      "explanation": "Transaction amount materially deviates from historical baseline."
+    }
+  ]
+}
+

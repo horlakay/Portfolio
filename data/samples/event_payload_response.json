@@ -1,0 +1,24 @@
+{
+  "event_id": "11111111-1111-4111-8111-111111111111",
+  "idempotency_key": "demo-login-001",
+  "event_type": "login_attempt",
+  "timestamp": "2026-04-01T08:00:00Z",
+  "user_id": "user-1001",
+  "account_id": "acct-1001",
+  "session_id": "sess-login-1",
+  "device_id": "device-nyc-primary",
+  "ip_address": "198.51.100.14",
+  "geolocation": {
+    "region": "US-NY",
+    "country": "US",
+    "city": "New York",
+    "latitude": 40.7128,
+    "longitude": -74.006
+  },
+  "amount": null,
+  "currency": null,
+  "metadata": {
+    "auth_result": "failure",
+    "mfa_present": false
+  }
+}

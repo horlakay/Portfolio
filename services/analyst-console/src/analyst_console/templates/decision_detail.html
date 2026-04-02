@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Decision Detail</title>
+    <style>
+      body { font-family: "Segoe UI", sans-serif; margin: 0; background: #f8fafc; color: #0f172a; }
+      header { background: #0f172a; color: white; padding: 1.25rem 2rem; }
+      main { padding: 2rem; display: grid; gap: 1.5rem; grid-template-columns: 2fr 1fr; }
+      section { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(15,23,42,.08); }
+      pre { white-space: pre-wrap; word-break: break-word; background: #f8fafc; border-radius: 12px; padding: 1rem; }
+      ul { padding-left: 1.25rem; }
+      textarea, select, button { width: 100%; border-radius: 12px; padding: .8rem; margin-top: .6rem; border: 1px solid #cbd5e1; }
+      button { background: #0f766e; color: white; border: none; cursor: pointer; font-weight: 700; }
+      a { color: #1d4ed8; text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/" style="color:white;">← Back to dashboard</a>
+      <h1>Decision {{ decision.decision_id }}</h1>
+    </header>
+    <main>
+      <section>
+        <h2>Decision Summary</h2>
+        <pre>{{ decision | tojson(indent=2) }}</pre>
+      </section>
+      <section>
+        <h2>Feedback</h2>
+        <form method="post" action="/decisions/{{ decision.decision_id }}/feedback">
+          <label>Label
+            <select name="label">
+              {% for label in labels %}
+              <option value="{{ label }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Notes
+            <textarea name="notes" rows="5" placeholder="Context for retraining or investigation"></textarea>
+          </label>
+          <button type="submit">Submit label</button>
+        </form>
+        <h3>Recent Labels</h3>
+        <ul>
+          {% for record in feedback %}
+          <li>{{ record.label }} by {{ record.actor_id }} at {{ record.submitted_at }}</li>
+          {% else %}
+          <li>No feedback yet.</li>
+          {% endfor %}
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
+

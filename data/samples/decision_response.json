@@ -1,0 +1,65 @@
+{
+  "decision_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "event_id": "33333333-3333-4333-8333-333333333333",
+  "account_id": "acct-1001",
+  "outcome": "deny",
+  "risk_score": 0.9421,
+  "confidence": 0.8842,
+  "rationale": [
+    "Hard deny rules triggered: password_reset_then_high_value_transfer",
+    "Active and shadow models diverged on this event."
+  ],
+  "rule_hits": [
+    {
+      "rule_id": "R006",
+      "name": "password_reset_then_high_value_transfer",
+      "severity": "critical",
+      "decision": "deny",
+      "explanation": "Recent password reset immediately followed by a large transaction."
+    }
+  ],
+  "feature_snapshot": {
+    "failed_login_count_5m": 6,
+    "successful_login_count_24h": 1,
+    "distinct_devices_7d": 2,
+    "distinct_ips_24h": 3,
+    "avg_txn_amount_30d": 240.5,
+    "txn_velocity_10m": 1,
+    "new_device_flag": true,
+    "new_region_flag": true,
+    "impossible_travel_flag": false,
+    "password_reset_recent_flag": true,
+    "high_risk_hour_flag": false,
+    "account_age_days": 18,
+    "device_reuse_score": 2.0,
+    "baseline_amount_deviation": 12.5135,
+    "session_anomaly_score": 0.8
+  },
+  "active_model_name": "fraud-gbt",
+  "candidate_model_name": "fraud-rf-shadow",
+  "shadow_divergence": true,
+  "degraded_mode": false,
+  "dependency_status": {
+    "feature_service": "ok",
+    "rule_engine": "ok",
+    "model_service": "ok"
+  },
+  "contributions": [
+    {
+      "feature_name": "baseline_amount_deviation",
+      "contribution": 1.93
+    }
+  ],
+  "decided_at": "2026-04-01T08:06:03Z",
+  "metadata": {
+    "feature_source": "postgres",
+    "feature_cache_hit": false,
+    "shadow_enabled": true,
+    "scoring_mode": "ml_inference",
+    "model_version": "20260401091500",
+    "candidate_risk_score": 0.7812,
+    "candidate_confidence": 0.5624,
+    "feature_computed_at": "2026-04-01T08:06:01Z",
+    "rule_hit_count": 1
+  }
+}

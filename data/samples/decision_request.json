@@ -1,0 +1,26 @@
+{
+  "event": {
+    "event_id": "33333333-3333-4333-8333-333333333333",
+    "event_type": "transaction_initiated",
+    "timestamp": "2026-04-01T08:06:00Z",
+    "user_id": "user-1001",
+    "account_id": "acct-1001",
+    "session_id": "sess-txn-1",
+    "device_id": "device-new-london",
+    "ip_address": "203.0.113.24",
+    "geolocation": {
+      "region": "GB-LND",
+      "country": "GB",
+      "city": "London",
+      "latitude": 51.5074,
+      "longitude": -0.1278
+    },
+    "amount": 3250.0,
+    "currency": "USD",
+    "metadata": {
+      "payment_rail": "wire",
+      "merchant_id": "counterparty-4451"
+    }
+  }
+}
+

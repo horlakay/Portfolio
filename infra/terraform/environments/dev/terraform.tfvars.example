@@ -1,0 +1,17 @@
+aws_region = "eu-west-1"
+
+availability_zones = [
+  "eu-west-1a",
+  "eu-west-1b",
+]
+
+admin_principal_arns = [
+  "arn:aws:iam::123456789012:role/platform-admin",
+  "arn:aws:iam::123456789012:role/sentinelstream-github-dev",
+]
+
+cluster_public_access_cidrs = [
+  "0.0.0.0/0",
+]
+
+artifact_bucket_name = "sentinelstream-dev-artifacts-123456789012"

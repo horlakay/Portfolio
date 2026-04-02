@@ -1,0 +1,78 @@
+{
+  "failed_login_count_5m": {
+    "mean": 1.1915,
+    "std": 1.0844236934166254
+  },
+  "successful_login_count_24h": {
+    "mean": 2.608,
+    "std": 1.6267811168378685
+  },
+  "distinct_devices_7d": {
+    "mean": 1.341375,
+    "std": 0.5526086150343444
+  },
+  "distinct_ips_24h": {
+    "mean": 1.34625,
+    "std": 0.58600670899135
+  },
+  "avg_txn_amount_30d": {
+    "mean": 149.16841352934503,
+    "std": 95.27194261344545
+  },
+  "txn_velocity_10m": {
+    "mean": 0.80525,
+    "std": 0.8942440363511343
+  },
+  "new_device_flag": {
+    "mean": 0.118,
+    "std": 0.3226282863085486
+  },
+  "new_region_flag": {
+    "mean": 0.079125,
+    "std": 0.26995063167724365
+  },
+  "impossible_travel_flag": {
+    "mean": 0.032125,
+    "std": 0.1763430505688713
+  },
+  "password_reset_recent_flag": {
+    "mean": 0.04875,
+    "std": 0.21535838712333225
+  },
+  "high_risk_hour_flag": {
+    "mean": 0.248625,
+    "std": 0.4322429451367049
+  },
+  "account_age_days": {
+    "mean": 180.60375,
+    "std": 90.97213159549675
+  },
+  "device_reuse_score": {
+    "mean": 1.2034743,
+    "std": 0.993577601358218
+  },
+  "baseline_amount_deviation": {
+    "mean": 0.6188687125000001,
+    "std": 1.9237537908652256
+  },
+  "session_anomaly_score": {
+    "mean": 0.11893125,
+    "std": 0.1707426847817742
+  },
+  "amount": {
+    "mean": 78.130715,
+    "std": 118.379851722751
+  },
+  "event_login_attempt": {
+    "mean": 0.457125,
+    "std": 0.49818948048890865
+  },
+  "event_password_reset": {
+    "mean": 0.095875,
+    "std": 0.2944381447819522
+  },
+  "event_transaction_initiated": {
+    "mean": 0.447,
+    "std": 0.4972141417315504
+  }
+}

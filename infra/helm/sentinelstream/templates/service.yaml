@@ -1,0 +1,32 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- if $svc.enabled }}
+{{- $serviceConfig := default (dict) $svc.service }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "sentinelstream.serviceName" (dict "root" $root "name" $name) }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "sentinelstream.labels" $root | nindent 4 }}
+    {{- include "sentinelstream.selectorLabels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  annotations:
+    {{- toYaml (default $root.Values.serviceDefaults.annotations $serviceConfig.annotations) | nindent 4 }}
+spec:
+  type: {{ default $root.Values.serviceDefaults.type $serviceConfig.type }}
+  {{- with (default $root.Values.serviceDefaults.loadBalancerSourceRanges $serviceConfig.loadBalancerSourceRanges) }}
+  loadBalancerSourceRanges:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    {{- include "sentinelstream.selectorLabels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+  ports:
+    - name: http
+      port: {{ $svc.port }}
+      targetPort: http
+      protocol: TCP
+---
+{{- end }}
+{{- end }}

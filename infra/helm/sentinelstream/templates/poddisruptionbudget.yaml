@@ -1,0 +1,22 @@
+{{- $root := . -}}
+{{- range $name, $svc := .Values.services }}
+{{- $pdb := default $root.Values.serviceDefaults.pdb $svc.pdb }}
+{{- if and $svc.enabled $pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "sentinelstream.serviceName" (dict "root" $root "name" $name) }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "sentinelstream.labels" $root | nindent 4 }}
+    {{- include "sentinelstream.selectorLabels" $root | nindent 4 }}
+    app.kubernetes.io/component: {{ $name }}
+spec:
+  minAvailable: {{ $pdb.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "sentinelstream.selectorLabels" $root | nindent 6 }}
+      app.kubernetes.io/component: {{ $name }}
+---
+{{- end }}
+{{- end }}

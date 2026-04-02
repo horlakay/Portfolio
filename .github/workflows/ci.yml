@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+      - name: Lint
+        run: make lint
+      - name: Test
+        run: make test
+      - name: Compile
+        run: python -m compileall shared/src services training scripts tests
+
+  infra-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.8.5"
+      - uses: azure/setup-helm@v4
+        with:
+          version: "v3.15.4"
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive infra/terraform
+      - name: Terraform validate dev
+        run: |
+          terraform -chdir=infra/terraform/environments/dev init -backend=false
+          terraform -chdir=infra/terraform/environments/dev validate
+      - name: Terraform validate prod
+        run: |
+          terraform -chdir=infra/terraform/environments/prod init -backend=false
+          terraform -chdir=infra/terraform/environments/prod validate
+      - name: Helm lint
+        run: |
+          helm lint infra/helm/sentinelstream -f infra/helm/sentinelstream/values-dev.yaml
+          helm lint infra/helm/sentinelstream -f infra/helm/sentinelstream/values-prod.yaml
+      - name: Helm template
+        run: |
+          helm template sentinelstream infra/helm/sentinelstream -f infra/helm/sentinelstream/values-dev.yaml > /dev/null
+          helm template sentinelstream infra/helm/sentinelstream -f infra/helm/sentinelstream/values-prod.yaml > /dev/null
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+          pip install pip-audit
+      - name: Python dependency audit
+        run: pip-audit --progress-spinner off
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL

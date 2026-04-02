@@ -1,0 +1,74 @@
+rules:
+  - rule_id: R001
+    name: critical_new_device_large_transfer
+    description: High-value transfer attempted from a newly observed device.
+    severity: critical
+    decision: deny
+    condition: "event.event_type == 'transaction_initiated' and event.amount and event.amount > 2500 and features.new_device_flag"
+  - rule_id: R002
+    name: repeated_failed_logins_then_password_reset
+    description: Multiple failed logins followed by a recent password reset indicates likely account takeover activity.
+    severity: high
+    decision: manual_review
+    condition: "features.failed_login_count_5m >= 5 and features.password_reset_recent_flag"
+  - rule_id: R003
+    name: impossible_travel_login
+    description: Successful login pattern implies impossible travel across regions.
+    severity: high
+    decision: challenge
+    condition: "event.event_type == 'login_attempt' and features.impossible_travel_flag"
+  - rule_id: R004
+    name: high_device_reuse_on_login
+    description: Device appears across several accounts in a short window.
+    severity: medium
+    decision: manual_review
+    condition: "event.event_type == 'login_attempt' and features.device_reuse_score >= 3"
+  - rule_id: R005
+    name: transfer_velocity_spike
+    description: Transaction velocity exceeds normal operational expectations.
+    severity: medium
+    decision: challenge
+    condition: "event.event_type == 'transaction_initiated' and features.txn_velocity_10m >= 4"
+  - rule_id: R006
+    name: password_reset_then_high_value_transfer
+    description: Recent password reset immediately followed by a large transaction.
+    severity: critical
+    decision: deny
+    condition: "event.event_type == 'transaction_initiated' and features.password_reset_recent_flag and event.amount and event.amount > 1500"
+  - rule_id: R007
+    name: new_region_new_device_combo
+    description: Login from a new region and new device should be challenged.
+    severity: medium
+    decision: challenge
+    condition: "event.event_type == 'login_attempt' and features.new_region_flag and features.new_device_flag"
+  - rule_id: R008
+    name: young_account_large_transfer
+    description: Large transfer from a newly observed account deserves extra friction.
+    severity: medium
+    decision: challenge
+    condition: "event.event_type == 'transaction_initiated' and features.account_age_days <= 7 and event.amount and event.amount > 750"
+  - rule_id: R009
+    name: high_risk_hour_session_anomaly
+    description: High-risk session anomaly during an overnight window.
+    severity: medium
+    decision: challenge
+    condition: "features.high_risk_hour_flag and features.session_anomaly_score >= 0.7"
+  - rule_id: R010
+    name: anomalous_amount_vs_baseline
+    description: Transaction amount materially deviates from historical baseline.
+    severity: high
+    decision: manual_review
+    condition: "event.event_type == 'transaction_initiated' and features.baseline_amount_deviation >= 4"
+  - rule_id: R011
+    name: rapid_failed_auth_new_region
+    description: Several failed logins from an unfamiliar region within five minutes.
+    severity: high
+    decision: challenge
+    condition: "event.event_type == 'login_attempt' and features.failed_login_count_5m >= 3 and features.new_region_flag"
+  - rule_id: R012
+    name: suspicious_payment_rail_outlier
+    description: High-risk score on session anomaly with elevated device reuse before a transaction.
+    severity: high
+    decision: manual_review
+    condition: "event.event_type == 'transaction_initiated' and features.session_anomaly_score >= 0.85 and features.device_reuse_score >= 2"
+

@@ -1,0 +1,10 @@
+{
+  "shadow_enabled": true,
+  "active_model": "fraud-gbt",
+  "candidate_model": "fraud-rf-shadow",
+  "total_scores": 250,
+  "divergence_count": 19,
+  "divergence_rate": 0.076,
+  "last_compared_at": "2026-04-01T08:30:00Z"
+}
+

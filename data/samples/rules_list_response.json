@@ -1,0 +1,20 @@
+{
+  "rules": [
+    {
+      "rule_id": "R001",
+      "name": "critical_new_device_large_transfer",
+      "description": "High-value transfer attempted from a newly observed device.",
+      "severity": "critical",
+      "decision": "deny",
+      "condition": "event.event_type == 'transaction_initiated' and event.amount and event.amount > 2500 and features.new_device_flag"
+    },
+    {
+      "rule_id": "R006",
+      "name": "password_reset_then_high_value_transfer",
+      "description": "Recent password reset immediately followed by a large transaction.",
+      "severity": "critical",
+      "decision": "deny",
+      "condition": "event.event_type == 'transaction_initiated' and features.password_reset_recent_flag and event.amount and event.amount > 1500"
+    }
+  ]
+}

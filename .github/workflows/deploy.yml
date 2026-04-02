@@ -1,0 +1,159 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    environment: dev
+    strategy:
+      matrix:
+        service:
+          - ingestion-service
+          - feature-service
+          - rule-engine
+          - model-service
+          - decision-service
+          - feedback-service
+          - analyst-console
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bootstrap model artifacts
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          python training/pipelines/bootstrap_models.py --rows 12000 --seed 42
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'eu-west-1' }}
+      - uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:${{ github.sha }}
+            ${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Scan pushed image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+  deploy-dev:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+      KUBE_NAMESPACE: ${{ vars.KUBE_NAMESPACE || 'sentinelstream' }}
+      RELEASE_NAME: sentinelstream
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: azure/setup-helm@v4
+        with:
+          version: "v3.15.4"
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.30.0"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Install benchmark dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${AWS_REGION}"
+      - name: Create namespace and application secret
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ANALYST_CONSOLE_PASSWORD: ${{ secrets.ANALYST_CONSOLE_PASSWORD }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+        run: |
+          kubectl create namespace "${KUBE_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n "${KUBE_NAMESPACE}" create secret generic sentinelstream-secrets \
+            --from-literal=JWT_SECRET="${JWT_SECRET}" \
+            --from-literal=ANALYST_CONSOLE_PASSWORD="${ANALYST_CONSOLE_PASSWORD}" \
+            --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+            --from-literal=REDIS_URL="${REDIS_URL}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+      - name: Deploy
+        run: |
+          helm upgrade --install "${RELEASE_NAME}" infra/helm/sentinelstream \
+            --namespace "${KUBE_NAMESPACE}" \
+            --create-namespace \
+            --values infra/helm/sentinelstream/values-dev.yaml \
+            --set-string global.imageRegistry="${{ vars.ECR_REGISTRY }}/sentinelstream" \
+            --set-string global.imageTag="${{ github.sha }}" \
+            --set-string secrets.rolloutChecksum="${{ github.run_id }}" \
+            --set-string config.postgres.host="${{ vars.POSTGRES_HOST }}" \
+            --set-string config.postgres.port="${{ vars.POSTGRES_PORT || '5432' }}" \
+            --set-string config.postgres.database="${{ vars.POSTGRES_DB || 'sentinelstream' }}" \
+            --set-string config.postgres.user="${{ vars.POSTGRES_USER || 'sentinel' }}" \
+            --set-string config.kafkaBootstrapServers="${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" \
+            --history-max 10 \
+            --atomic \
+            --wait \
+            --timeout 10m
+      - name: Verify rollouts
+        run: |
+          kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-ingestion-service --timeout=5m
+          kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-feature-service --timeout=5m
+          kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-rule-engine --timeout=5m
+          kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-model-service --timeout=5m
+          kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-decision-service --timeout=5m
+      - name: Smoke test and benchmark
+        run: |
+          kubectl -n "${KUBE_NAMESPACE}" port-forward svc/sentinelstream-decision-service 18005:8005 > decision-port-forward.log 2>&1 &
+          PORT_FORWARD_PID=$!
+          trap "kill ${PORT_FORWARD_PID}" EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18005/health/ready; then
+              break
+            fi
+            sleep 5
+          done
+          BENCHMARK_RUNS=25 DECISION_SERVICE_URL=http://127.0.0.1:18005 python tests/load/benchmark_driver.py
+      - name: Upload benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: decision-benchmark-${{ github.sha }}
+          path: tests/load/results/latest_benchmark.json
+      - name: Append deployment summary
+        run: |
+          echo "## Dev deployment" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Release: ${RELEASE_NAME}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Namespace: ${KUBE_NAMESPACE}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Image tag: ${{ github.sha }}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "### Decision benchmark" >> "${GITHUB_STEP_SUMMARY}"
+          echo '```json' >> "${GITHUB_STEP_SUMMARY}"
+          cat tests/load/results/latest_benchmark.json >> "${GITHUB_STEP_SUMMARY}"
+          echo '```' >> "${GITHUB_STEP_SUMMARY}"

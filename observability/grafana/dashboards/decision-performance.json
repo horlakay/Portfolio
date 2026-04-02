@@ -1,0 +1,100 @@
+{
+  "title": "Decision API Performance",
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "10s",
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Decision Latency Quantiles (ms)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "1000 * histogram_quantile(0.5, sum(rate(decision_latency_seconds_bucket[5m])) by (le, mode))",
+          "legendFormat": "p50 {{mode}}",
+          "refId": "A"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.95, sum(rate(decision_latency_seconds_bucket[5m])) by (le, mode))",
+          "legendFormat": "p95 {{mode}}",
+          "refId": "B"
+        },
+        {
+          "expr": "1000 * histogram_quantile(0.99, sum(rate(decision_latency_seconds_bucket[5m])) by (le, mode))",
+          "legendFormat": "p99 {{mode}}",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Feature Lookup p95 (ms)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "1000 * histogram_quantile(0.95, sum(rate(feature_lookup_latency_seconds_bucket[5m])) by (le, cache))",
+          "legendFormat": "{{cache}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Dependency Request Latency p95 (ms)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "1000 * histogram_quantile(0.95, sum(rate(dependency_request_latency_seconds_bucket{caller=\"decision-service\"}[5m])) by (le, target, path))",
+          "legendFormat": "{{target}} {{path}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Decision Outcomes",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(decision_outcomes_total[5m])) by (outcome, degraded_mode)",
+          "legendFormat": "{{outcome}} / degraded={{degraded_mode}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Downstream Dependency Errors",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "sum(increase(dependency_requests_total{caller=\"decision-service\",status!=\"success\"}[15m])) by (target, status)",
+          "legendFormat": "{{target}} / {{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "logs",
+      "title": "Decision-Service Logs",
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        {
+          "expr": "{compose_service=\"decision-service\"} | json",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

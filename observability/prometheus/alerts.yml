@@ -1,0 +1,112 @@
+groups:
+  - name: sentinelstream-core
+    rules:
+      - alert: HighHttpErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) by (service) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: Elevated 5xx error rate on {{ $labels.service }}
+          description: HTTP 5xx rate has exceeded 5% over the last 5 minutes.
+
+      - alert: DecisionLatencyHigh
+        expr: histogram_quantile(0.95, sum(rate(decision_latency_seconds_bucket[5m])) by (le, mode)) > 0.075
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: Decision latency p95 exceeded target
+          description: Decision latency p95 has been above 75ms for 10 minutes.
+
+      - alert: DecisionDegradedModeSpike
+        expr: sum(rate(decision_outcomes_total{degraded_mode="true"}[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: Degraded decisions are increasing
+          description: The decision service is producing degraded decisions at an elevated rate.
+
+      - alert: ModelServiceUnavailable
+        expr: up{job="sentinelstream-services", instance="model-service:8004"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: ml-platform
+        annotations:
+          summary: model-service is unavailable
+          description: Prometheus can no longer scrape model-service.
+
+      - alert: DependencyCircuitBreakerOpen
+        expr: increase(dependency_circuit_open_total[10m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: Downstream dependency circuit breaker opened
+          description: A service opened its circuit breaker for a downstream dependency.
+
+      - alert: FeatureCacheMissSpike
+        expr: rate(feature_lookup_latency_seconds_count{cache="miss"}[5m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: feature-service cache miss rate is elevated
+          description: Cache misses are high enough to threaten feature lookup latency.
+
+      - alert: FeatureCacheErrors
+        expr: increase(feature_cache_operations_total{outcome="error"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: Feature cache operations are failing
+          description: Redis-backed feature cache operations are returning errors.
+
+      - alert: BrokerPublishFailures
+        expr: increase(broker_publish_failures_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          team: sre
+        annotations:
+          summary: Broker publish failures detected
+          description: One or more services are failing to publish to Redpanda.
+
+      - alert: ConsumerLagHigh
+        expr: max_over_time(kafka_consumer_lag[10m]) > 25
+        for: 10m
+        labels:
+          severity: warning
+          team: sre
+        annotations:
+          summary: Kafka consumer lag is building up
+          description: A SentinelStream consumer is not keeping up with the stream.
+
+      - alert: DeadLetterQueueGrowth
+        expr: increase(dead_letter_events_total[10m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: Dead-letter queue is receiving events
+          description: Poison events or downstream failures are pushing events into the DLQ.
+
+      - alert: DriftThresholdExceeded
+        expr: increase(drift_alerts_total[15m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+          team: ml-platform
+        annotations:
+          summary: Model drift threshold exceeded
+          description: Feature drift alerts have fired in the last 15 minutes.

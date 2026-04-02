@@ -1,0 +1,332 @@
+version: "3.9"
+
+x-common-env: &common-env
+  ENVIRONMENT: ${ENVIRONMENT:-local}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  JWT_SECRET: ${JWT_SECRET:-change-me-in-real-environments}
+  JWT_ISSUER: ${JWT_ISSUER:-sentinelstream}
+  JWT_AUDIENCE: ${JWT_AUDIENCE:-sentinelstream-analyst}
+  ANALYST_CONSOLE_PASSWORD: ${ANALYST_CONSOLE_PASSWORD:-demo-password}
+  POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel}
+  POSTGRES_DB: ${POSTGRES_DB:-sentinelstream}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-redpanda:9092}
+  RAW_EVENTS_TOPIC: ${RAW_EVENTS_TOPIC:-sentinel.events.raw}
+  DECISIONS_TOPIC: ${DECISIONS_TOPIC:-sentinel.events.decisions}
+  FEEDBACK_TOPIC: ${FEEDBACK_TOPIC:-sentinel.events.feedback}
+  DLQ_TOPIC: ${DLQ_TOPIC:-sentinel.events.dlq}
+  FEATURE_SERVICE_URL: ${FEATURE_SERVICE_URL:-http://feature-service:8002}
+  RULE_ENGINE_URL: ${RULE_ENGINE_URL:-http://rule-engine:8003}
+  MODEL_SERVICE_URL: ${MODEL_SERVICE_URL:-http://model-service:8004}
+  DECISION_SERVICE_URL: ${DECISION_SERVICE_URL:-http://decision-service:8005}
+  FEEDBACK_SERVICE_URL: ${FEEDBACK_SERVICE_URL:-http://feedback-service:8006}
+  INGESTION_SERVICE_URL: ${INGESTION_SERVICE_URL:-http://ingestion-service:8001}
+  ANALYST_CONSOLE_URL: ${ANALYST_CONSOLE_URL:-http://analyst-console:8007}
+  OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+  DECISION_ALLOW_THRESHOLD: ${DECISION_ALLOW_THRESHOLD:-0.35}
+  DECISION_CHALLENGE_THRESHOLD: ${DECISION_CHALLENGE_THRESHOLD:-0.70}
+  DECISION_DENY_THRESHOLD: ${DECISION_DENY_THRESHOLD:-0.90}
+  MODEL_TIMEOUT_MS: ${MODEL_TIMEOUT_MS:-40}
+  FEATURE_TIMEOUT_MS: ${FEATURE_TIMEOUT_MS:-30}
+  RULE_TIMEOUT_MS: ${RULE_TIMEOUT_MS:-20}
+  SHADOW_MODEL_ENABLED: ${SHADOW_MODEL_ENABLED:-true}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel}
+      POSTGRES_DB: ${POSTGRES_DB:-sentinelstream}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.1.10
+    command:
+      - redpanda
+      - start
+      - --smp
+      - "1"
+      - --memory
+      - "1G"
+      - --reserve-memory
+      - "0M"
+      - --overprovisioned
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:9092
+      - --set
+      - redpanda.auto_create_topics_enabled=true
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster info >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v2.7.2
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    ports:
+      - "8080:8080"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.107.0
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ./observability/otel/otel-collector.yaml:/etc/otel/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "13133:13133"
+    healthcheck:
+      test: ["CMD", "/otelcol-contrib", "--config=/etc/otel/config.yaml", "--dry-run"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:3.1.1
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./observability/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+    ports:
+      - "3100:3100"
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    command: ["-config.file=/etc/promtail/promtail-config.yaml"]
+    volumes:
+      - ./observability/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - loki
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    command: ["-config.file=/etc/tempo/tempo.yaml"]
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+    ports:
+      - "3200:3200"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3000:3000"
+
+  ingestion-service:
+    build:
+      context: .
+      dockerfile: services/ingestion-service/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: ingestion-service
+      SERVICE_PORT: 8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health/ready', timeout=2).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  feature-service:
+    build:
+      context: .
+      dockerfile: services/feature-service/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: feature-service
+      SERVICE_PORT: 8002
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health/ready', timeout=2).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  rule-engine:
+    build:
+      context: .
+      dockerfile: services/rule-engine/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: rule-engine
+      SERVICE_PORT: 8003
+    depends_on:
+      otel-collector:
+        condition: service_started
+    ports:
+      - "8003:8003"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health/ready', timeout=2).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  model-service:
+    build:
+      context: .
+      dockerfile: services/model-service/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: model-service
+      SERVICE_PORT: 8004
+    depends_on:
+      otel-collector:
+        condition: service_started
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./training/models:/app/training/models
+      - ./training/evaluation:/app/training/evaluation
+      - ./data/synthetic:/app/data/synthetic
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health/ready', timeout=2).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  decision-service:
+    build:
+      context: .
+      dockerfile: services/decision-service/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: decision-service
+      SERVICE_PORT: 8005
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      feature-service:
+        condition: service_healthy
+      rule-engine:
+        condition: service_healthy
+      model-service:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    ports:
+      - "8005:8005"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8005/health/ready', timeout=2).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  feedback-service:
+    build:
+      context: .
+      dockerfile: services/feedback-service/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: feedback-service
+      SERVICE_PORT: 8006
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    ports:
+      - "8006:8006"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8006/health/ready', timeout=2).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  analyst-console:
+    build:
+      context: .
+      dockerfile: services/analyst-console/Dockerfile
+    environment:
+      <<: *common-env
+      SERVICE_NAME: analyst-console
+      SERVICE_PORT: 8007
+    depends_on:
+      decision-service:
+        condition: service_healthy
+      feedback-service:
+        condition: service_healthy
+    ports:
+      - "8007:8007"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8007/health/ready', timeout=2).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  redisdata:

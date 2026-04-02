@@ -1,0 +1,28 @@
+{
+  "generated_at": "2026-04-02T11:10:15.414959+00:00",
+  "dataset_path": "data\\synthetic\\synthetic_fraud_training.csv",
+  "dataset_manifest_path": "data\\synthetic\\synthetic_fraud_training_manifest.json",
+  "rows": 8000,
+  "active": {
+    "precision": 0.5972222222222222,
+    "recall": 0.16104868913857678,
+    "f1": 0.2536873156342183,
+    "roc_auc": 0.6775194036104256,
+    "threshold": 0.5,
+    "true_positives": 86,
+    "true_negatives": 1408,
+    "false_positives": 58,
+    "false_negatives": 448
+  },
+  "candidate": {
+    "precision": 0.4153846153846154,
+    "recall": 0.4550561797752809,
+    "f1": 0.4343163538873995,
+    "roc_auc": 0.6662515137115441,
+    "threshold": 0.5,
+    "true_positives": 243,
+    "true_negatives": 1124,
+    "false_positives": 342,
+    "false_negatives": 291
+  }
+}

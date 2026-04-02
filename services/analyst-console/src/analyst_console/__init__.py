@@ -1,0 +1,2 @@
+"""SentinelStream analyst console."""
+

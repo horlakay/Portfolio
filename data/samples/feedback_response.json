@@ -1,0 +1,24 @@
+{
+  "feedback_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "decision_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "label": "confirmed_fraud",
+  "notes": "Chargeback and customer confirmation established account takeover.",
+  "submitted_at": "2026-04-01T09:10:00Z",
+  "actor_id": "analyst-7",
+  "actor_role": "analyst",
+  "decision_context": {
+    "decision_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "event_id": "33333333-3333-4333-8333-333333333333",
+    "account_id": "acct-1001",
+    "outcome": "deny",
+    "risk_score": 0.9421,
+    "confidence": 0.8842,
+    "degraded_mode": false,
+    "decided_at": "2026-04-01T08:06:03Z",
+    "metadata": {
+      "candidate_risk_score": 0.7812,
+      "candidate_confidence": 0.5624,
+      "scoring_mode": "ml_inference"
+    }
+  }
+}

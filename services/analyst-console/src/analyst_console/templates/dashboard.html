@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SentinelStream Console</title>
+    <style>
+      body { font-family: "Segoe UI", sans-serif; margin: 0; background: #f8fafc; color: #0f172a; }
+      header { background: linear-gradient(120deg, #0f172a, #1d4ed8); color: white; padding: 1.5rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+      main { padding: 2rem; }
+      table { width: 100%; border-collapse: collapse; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(15,23,42,.08); }
+      th, td { padding: .9rem 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+      .tag { display: inline-block; padding: .2rem .55rem; border-radius: 999px; font-size: .82rem; font-weight: 700; }
+      .deny { background: #fee2e2; color: #991b1b; }
+      .challenge { background: #fef3c7; color: #92400e; }
+      .allow { background: #dcfce7; color: #166534; }
+      .manual_review { background: #ede9fe; color: #5b21b6; }
+      a { color: #1d4ed8; text-decoration: none; font-weight: 600; }
+      form.inline { margin: 0; }
+      button { background: transparent; border: 1px solid rgba(255,255,255,.4); color: white; border-radius: 999px; padding: .5rem 1rem; cursor: pointer; }
+      .subtle { color: #475569; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1 style="margin:0;">Fraud Operations Console</h1>
+        <div class="subtle" style="color:#cbd5e1;">Signed in as {{ claims.sub }} ({{ claims.role }})</div>
+      </div>
+      <form class="inline" method="post" action="/logout"><button type="submit">Logout</button></form>
+    </header>
+    <main>
+      <p class="subtle">Latest decisions generated at {{ generated_at }}</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Decision</th>
+            <th>Account</th>
+            <th>Event</th>
+            <th>Outcome</th>
+            <th>Risk</th>
+            <th>Confidence</th>
+            <th>Mode</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for decision in decisions %}
+          <tr>
+            <td><a href="/decisions/{{ decision.decision_id }}">{{ decision.decision_id }}</a></td>
+            <td>{{ decision.account_id }}</td>
+            <td>{{ decision.event_type }}</td>
+            <td><span class="tag {{ decision.outcome }}">{{ decision.outcome }}</span></td>
+            <td>{{ decision.risk_score }}</td>
+            <td>{{ decision.confidence }}</td>
+            <td>{{ "degraded" if decision.degraded_mode else "normal" }}</td>
+            <td>{{ decision.decided_at }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </main>
+  </body>
+</html>
+

@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sentinelstream.configName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "sentinelstream.labels" . | nindent 4 }}
+    {{- include "sentinelstream.selectorLabels" . | nindent 4 }}
+data:
+  ENVIRONMENT: {{ .Values.global.environment | quote }}
+  LOG_LEVEL: {{ .Values.global.logLevel | quote }}
+  POSTGRES_HOST: {{ .Values.config.postgres.host | quote }}
+  POSTGRES_PORT: {{ .Values.config.postgres.port | quote }}
+  POSTGRES_DB: {{ .Values.config.postgres.database | quote }}
+  POSTGRES_USER: {{ .Values.config.postgres.user | quote }}
+  KAFKA_BOOTSTRAP_SERVERS: {{ .Values.config.kafkaBootstrapServers | quote }}
+  RAW_EVENTS_TOPIC: {{ .Values.config.rawEventsTopic | quote }}
+  DECISIONS_TOPIC: {{ .Values.config.decisionsTopic | quote }}
+  FEEDBACK_TOPIC: {{ .Values.config.feedbackTopic | quote }}
+  DLQ_TOPIC: {{ .Values.config.dlqTopic | quote }}
+  FEATURE_SERVICE_URL: {{ printf "http://%s:%v" (include "sentinelstream.serviceName" (dict "root" . "name" "feature-service")) (index .Values.services "feature-service" "port") | quote }}
+  RULE_ENGINE_URL: {{ printf "http://%s:%v" (include "sentinelstream.serviceName" (dict "root" . "name" "rule-engine")) (index .Values.services "rule-engine" "port") | quote }}
+  MODEL_SERVICE_URL: {{ printf "http://%s:%v" (include "sentinelstream.serviceName" (dict "root" . "name" "model-service")) (index .Values.services "model-service" "port") | quote }}
+  DECISION_SERVICE_URL: {{ printf "http://%s:%v" (include "sentinelstream.serviceName" (dict "root" . "name" "decision-service")) (index .Values.services "decision-service" "port") | quote }}
+  FEEDBACK_SERVICE_URL: {{ printf "http://%s:%v" (include "sentinelstream.serviceName" (dict "root" . "name" "feedback-service")) (index .Values.services "feedback-service" "port") | quote }}
+  INGESTION_SERVICE_URL: {{ printf "http://%s:%v" (include "sentinelstream.serviceName" (dict "root" . "name" "ingestion-service")) (index .Values.services "ingestion-service" "port") | quote }}
+  ANALYST_CONSOLE_URL: {{ printf "http://%s:%v" (include "sentinelstream.serviceName" (dict "root" . "name" "analyst-console")) (index .Values.services "analyst-console" "port") | quote }}
+  JWT_ISSUER: {{ .Values.config.jwtIssuer | quote }}
+  JWT_AUDIENCE: {{ .Values.config.jwtAudience | quote }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.global.otelEndpoint | quote }}
+  PROMETHEUS_MULTIPROC_DIR: {{ .Values.global.prometheusMultiprocDir | quote }}
+  DECISION_ALLOW_THRESHOLD: {{ .Values.config.decisionAllowThreshold | quote }}
+  DECISION_CHALLENGE_THRESHOLD: {{ .Values.config.decisionChallengeThreshold | quote }}
+  DECISION_DENY_THRESHOLD: {{ .Values.config.decisionDenyThreshold | quote }}
+  MODEL_TIMEOUT_MS: {{ .Values.config.modelTimeoutMs | quote }}
+  FEATURE_TIMEOUT_MS: {{ .Values.config.featureTimeoutMs | quote }}
+  RULE_TIMEOUT_MS: {{ .Values.config.ruleTimeoutMs | quote }}
+  SHADOW_MODEL_ENABLED: {{ .Values.config.shadowModelEnabled | quote }}

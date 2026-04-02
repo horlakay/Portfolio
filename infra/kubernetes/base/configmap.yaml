@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinelstream-config
+  namespace: sentinelstream
+data:
+  ENVIRONMENT: dev
+  RAW_EVENTS_TOPIC: sentinel.events.raw
+  DECISIONS_TOPIC: sentinel.events.decisions
+  FEEDBACK_TOPIC: sentinel.events.feedback
+  DLQ_TOPIC: sentinel.events.dlq
+

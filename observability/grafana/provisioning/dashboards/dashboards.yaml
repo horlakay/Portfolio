@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: SentinelStream
+    orgId: 1
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards
+

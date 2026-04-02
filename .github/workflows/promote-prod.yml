@@ -1,0 +1,97 @@
+name: Promote Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Previously built image tag to promote
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy-prod:
+    runs-on: ubuntu-latest
+    environment: prod
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-west-1' }}
+      KUBE_NAMESPACE: ${{ vars.KUBE_NAMESPACE || 'sentinelstream' }}
+      RELEASE_NAME: sentinelstream
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: "v3.15.4"
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.30.0"
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${AWS_REGION}"
+      - name: Create namespace and application secret
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ANALYST_CONSOLE_PASSWORD: ${{ secrets.ANALYST_CONSOLE_PASSWORD }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+        run: |
+          kubectl create namespace "${KUBE_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n "${KUBE_NAMESPACE}" create secret generic sentinelstream-secrets \
+            --from-literal=JWT_SECRET="${JWT_SECRET}" \
+            --from-literal=ANALYST_CONSOLE_PASSWORD="${ANALYST_CONSOLE_PASSWORD}" \
+            --from-literal=POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+            --from-literal=REDIS_URL="${REDIS_URL}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+      - name: Deploy
+        run: |
+          helm upgrade --install "${RELEASE_NAME}" infra/helm/sentinelstream \
+            --namespace "${KUBE_NAMESPACE}" \
+            --create-namespace \
+            --values infra/helm/sentinelstream/values-prod.yaml \
+            --set-string global.imageRegistry="${{ vars.ECR_REGISTRY }}/sentinelstream" \
+            --set-string global.imageTag="${{ inputs.image_tag }}" \
+            --set-string secrets.rolloutChecksum="${{ github.run_id }}" \
+            --set-string config.postgres.host="${{ vars.POSTGRES_HOST }}" \
+            --set-string config.postgres.port="${{ vars.POSTGRES_PORT || '5432' }}" \
+            --set-string config.postgres.database="${{ vars.POSTGRES_DB || 'sentinelstream' }}" \
+            --set-string config.postgres.user="${{ vars.POSTGRES_USER || 'sentinel' }}" \
+            --set-string config.kafkaBootstrapServers="${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" \
+            --history-max 20 \
+            --atomic \
+            --wait \
+            --timeout 15m
+      - name: Verify rollout
+        run: |
+          kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-feature-service --timeout=10m
+          kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-model-service --timeout=10m
+          kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-decision-service --timeout=10m
+      - name: Smoke test
+        run: |
+          kubectl -n "${KUBE_NAMESPACE}" port-forward svc/sentinelstream-decision-service 18005:8005 > decision-port-forward.log 2>&1 &
+          PORT_FORWARD_PID=$!
+          trap "kill ${PORT_FORWARD_PID}" EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18005/health/ready; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+      - name: Append promotion summary
+        run: |
+          echo "## Production promotion" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Release: ${RELEASE_NAME}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Namespace: ${KUBE_NAMESPACE}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Image tag: ${{ inputs.image_tag }}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Rollback: helm rollback ${RELEASE_NAME} <revision> -n ${KUBE_NAMESPACE}" >> "${GITHUB_STEP_SUMMARY}"

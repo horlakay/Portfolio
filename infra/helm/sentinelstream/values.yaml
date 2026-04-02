@@ -1,0 +1,145 @@
+nameOverride: ""
+fullnameOverride: ""
+
+global:
+  environment: dev
+  imageRegistry: public.ecr.aws/example/sentinelstream
+  imageTag: latest
+  imagePullPolicy: IfNotPresent
+  imagePullSecrets: []
+  logLevel: INFO
+  otelEndpoint: http://otel-collector.observability:4317
+  prometheusMultiprocDir: /tmp/prometheus
+  podAnnotations: {}
+  podSecurityContext:
+    fsGroup: 10001
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    runAsGroup: 10001
+    runAsNonRoot: true
+    runAsUser: 10001
+
+config:
+  postgres:
+    host: sentinelstream-postgres.sentinelstream-data.svc.cluster.local
+    port: 5432
+    database: sentinelstream
+    user: sentinel
+  kafkaBootstrapServers: sentinelstream-redpanda.kafka.svc.cluster.local:9092
+  rawEventsTopic: sentinel.events.raw
+  decisionsTopic: sentinel.events.decisions
+  feedbackTopic: sentinel.events.feedback
+  dlqTopic: sentinel.events.dlq
+  jwtIssuer: sentinelstream
+  jwtAudience: sentinelstream-analyst
+  decisionAllowThreshold: 0.35
+  decisionChallengeThreshold: 0.70
+  decisionDenyThreshold: 0.90
+  modelTimeoutMs: 40
+  featureTimeoutMs: 30
+  ruleTimeoutMs: 20
+  shadowModelEnabled: true
+
+secrets:
+  create: false
+  name: sentinelstream-secrets
+  rolloutChecksum: ""
+  annotations: {}
+  stringData:
+    JWT_SECRET: change-me
+    ANALYST_CONSOLE_PASSWORD: change-me
+    POSTGRES_PASSWORD: change-me
+    REDIS_URL: redis://sentinelstream-redis.sentinelstream-data.svc.cluster.local:6379/0
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: sentinelstream.internal.example.com
+  tls: []
+
+serviceDefaults:
+  type: ClusterIP
+  annotations: {}
+  loadBalancerSourceRanges: []
+  terminationGracePeriodSeconds: 30
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+  hpa:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  pdb:
+    enabled: false
+    minAvailable: 1
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+services:
+  ingestion-service:
+    enabled: true
+    repository: ingestion-service
+    port: 8001
+    replicas: 2
+  feature-service:
+    enabled: true
+    repository: feature-service
+    port: 8002
+    replicas: 2
+  rule-engine:
+    enabled: true
+    repository: rule-engine
+    port: 8003
+    replicas: 2
+  model-service:
+    enabled: true
+    repository: model-service
+    port: 8004
+    replicas: 2
+  decision-service:
+    enabled: true
+    repository: decision-service
+    port: 8005
+    replicas: 3
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 65
+    pdb:
+      enabled: true
+      minAvailable: 2
+  feedback-service:
+    enabled: true
+    repository: feedback-service
+    port: 8006
+    replicas: 2
+  analyst-console:
+    enabled: true
+    repository: analyst-console
+    port: 8007
+    replicas: 2

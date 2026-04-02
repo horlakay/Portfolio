@@ -1,0 +1,13 @@
+[
+  {
+    "decision_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "event_id": "33333333-3333-4333-8333-333333333333",
+    "account_id": "acct-1001",
+    "event_type": "transaction_initiated",
+    "outcome": "deny",
+    "risk_score": 0.9421,
+    "confidence": 0.8842,
+    "degraded_mode": false,
+    "decided_at": "2026-04-01T08:06:03Z"
+  }
+]
