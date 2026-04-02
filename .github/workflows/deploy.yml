@@ -53,14 +53,19 @@ jobs:
             ${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b "${HOME}/.local/bin" v0.65.0
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
       - name: Scan pushed image
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          image-ref: ${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:${{ github.sha }}
-          format: table
-          exit-code: "1"
-          ignore-unfixed: true
-          severity: HIGH,CRITICAL
+        run: |
+          trivy image \
+            --format table \
+            --exit-code 1 \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            "${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:${{ github.sha }}"
 
   deploy-dev:
     if: ${{ vars.ECR_REGISTRY != '' && vars.EKS_CLUSTER_NAME != '' && vars.POSTGRES_HOST != '' && vars.KAFKA_BOOTSTRAP_SERVERS != '' && secrets.AWS_DEPLOY_ROLE_ARN != '' && secrets.JWT_SECRET != '' && secrets.ANALYST_CONSOLE_PASSWORD != '' && secrets.POSTGRES_PASSWORD != '' && secrets.REDIS_URL != '' }}

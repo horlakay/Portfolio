@@ -59,12 +59,16 @@ jobs:
           pip install pip-audit
       - name: Python dependency audit
         run: pip-audit --progress-spinner off
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b "${HOME}/.local/bin" v0.65.0
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@v0.33.1
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: table
-          exit-code: "1"
-          ignore-unfixed: true
-          severity: HIGH,CRITICAL
+        run: |
+          trivy fs \
+            --format table \
+            --exit-code 1 \
+            --ignore-unfixed \
+            --severity HIGH,CRITICAL \
+            .
