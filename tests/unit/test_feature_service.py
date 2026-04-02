@@ -66,4 +66,3 @@ def test_feature_snapshot_uses_previous_login_for_impossible_travel() -> None:
         event,
     )
     assert snapshot.impossible_travel_flag is True
-

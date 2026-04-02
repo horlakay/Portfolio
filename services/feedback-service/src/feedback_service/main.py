@@ -1,21 +1,25 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import Depends, HTTPException, Request
-from sqlalchemy import JSON, Boolean, DateTime, Float, String, desc, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
+from fastapi import Depends, FastAPI, HTTPException, Request
 from sentinel_shared.auth import Role, TokenClaims, require_roles
 from sentinel_shared.config import CommonSettings, get_common_settings
 from sentinel_shared.logging import get_logger
-from sentinel_shared.schemas.feedback import FeedbackDecisionContext, FeedbackRecord, FeedbackSubmission
+from sentinel_shared.schemas.feedback import (
+    FeedbackDecisionContext,
+    FeedbackRecord,
+    FeedbackSubmission,
+)
 from sentinel_shared.telemetry import feedback_labels_total, get_tracer
 from sentinel_shared.utils.database import create_async_engine_and_session
 from sentinel_shared.utils.fastapi import build_app
 from sentinel_shared.utils.kafka import JsonProducer
+from sqlalchemy import JSON, Boolean, DateTime, Float, String, desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 logger = get_logger(__name__)
 tracer = get_tracer(__name__)
@@ -62,11 +66,13 @@ class AppState:
     def __init__(self, settings: CommonSettings) -> None:
         self.settings = settings
         self.engine, self.session_factory = create_async_engine_and_session(settings.database_url)
-        self.producer = JsonProducer(settings.kafka_bootstrap_servers, service_name=settings.service_name)
+        self.producer = JsonProducer(
+            settings.kafka_bootstrap_servers, service_name=settings.service_name
+        )
 
 
 @asynccontextmanager
-async def lifespan(app):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     state = AppState(get_common_settings())
     app.state.container = state
     async with state.engine.begin() as connection:
@@ -85,7 +91,7 @@ def get_state(request: Request) -> AppState:
     return request.app.state.container
 
 
-async def get_session(request: Request) -> AsyncSession:
+async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     state = get_state(request)
     async with state.session_factory() as session:
         yield session

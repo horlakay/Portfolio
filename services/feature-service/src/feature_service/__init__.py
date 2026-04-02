@@ -1,2 +1,1 @@
 """SentinelStream feature service."""
-

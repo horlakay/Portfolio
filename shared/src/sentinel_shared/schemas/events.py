@@ -86,4 +86,3 @@ class EventIngestResponse(BaseModel):
     topic: str
     trace_id: str | None = None
     stored_at: datetime
-

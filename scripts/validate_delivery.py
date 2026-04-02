@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import hcl2
 import yaml
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -147,7 +145,13 @@ def validate_terraform() -> list[str]:
 
     for environment in ("dev", "prod"):
         env_dir = terraform_root / "environments" / environment
-        for name in ("main.tf", "variables.tf", "outputs.tf", "terraform.tfvars.example", "backend.hcl.example"):
+        for name in (
+            "main.tf",
+            "variables.tf",
+            "outputs.tf",
+            "terraform.tfvars.example",
+            "backend.hcl.example",
+        ):
             if not (env_dir / name).exists():
                 errors.append(f"missing Terraform env file: {env_dir.relative_to(ROOT) / name}")
 

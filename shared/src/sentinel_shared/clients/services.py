@@ -21,7 +21,9 @@ from sentinel_shared.utils.resilience import AsyncCircuitBreaker, CircuitOpenErr
 
 
 class BaseServiceClient:
-    def __init__(self, base_url: str, timeout_ms: int = 30, caller_service: str = "unknown") -> None:
+    def __init__(
+        self, base_url: str, timeout_ms: int = 30, caller_service: str = "unknown"
+    ) -> None:
         self._client = httpx.AsyncClient(base_url=base_url, timeout=timeout_ms / 1000)
         self._breaker = AsyncCircuitBreaker()
         self._base_url = base_url

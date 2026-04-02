@@ -5,7 +5,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-
 from ingestion_service.main import IngestedEvent, ingest_event
 from sentinel_shared.config import CommonSettings
 from sentinel_shared.schemas.events import EventEnvelope, EventType

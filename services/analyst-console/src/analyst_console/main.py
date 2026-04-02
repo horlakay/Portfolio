@@ -4,10 +4,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi import Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-
 from sentinel_shared.auth import Role, create_access_token, decode_token
 from sentinel_shared.config import CommonSettings, get_common_settings
 from sentinel_shared.logging import get_logger, get_request_id
@@ -66,7 +65,9 @@ async def home(request: Request) -> HTMLResponse | RedirectResponse:
     if claims is None:
         return RedirectResponse(url="/login", status_code=302)
     token = _token_from_cookie(request)
-    decisions = await _api_get("/v1/decisions?limit=25", token, get_common_settings().decision_service_url)
+    decisions = await _api_get(
+        "/v1/decisions?limit=25", token, get_common_settings().decision_service_url
+    )
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -119,7 +120,9 @@ async def decision_detail(request: Request, decision_id: str) -> HTMLResponse | 
     token = _token_from_cookie(request)
     settings = get_common_settings()
     decision = await _api_get(f"/v1/decisions/{decision_id}", token, settings.decision_service_url)
-    feedback = await _api_get(f"/v1/feedback/decisions/{decision_id}", token, settings.feedback_service_url)
+    feedback = await _api_get(
+        f"/v1/feedback/decisions/{decision_id}", token, settings.feedback_service_url
+    )
     return templates.TemplateResponse(
         "decision_detail.html",
         {
@@ -153,5 +156,7 @@ async def submit_feedback(
             "notes": notes or None,
         },
     )
-    logger.info("console_feedback_submitted", decision_id=decision_id, actor=claims["sub"], label=label)
+    logger.info(
+        "console_feedback_submitted", decision_id=decision_id, actor=claims["sub"], label=label
+    )
     return RedirectResponse(url=f"/decisions/{decision_id}", status_code=302)

@@ -39,4 +39,3 @@ class AsyncCircuitBreaker:
             self.failures = 0
             self.opened_at = None
         return result
-

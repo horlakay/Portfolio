@@ -3,22 +3,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from time import perf_counter
 
 from aiokafka import AIOKafkaConsumer
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from opentelemetry.trace import SpanKind
-from slowapi import Limiter
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
-from sqlalchemy import JSON, Boolean, DateTime, Float, String, desc, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
 from sentinel_shared.auth import Role, require_roles
 from sentinel_shared.clients import FeatureServiceClient, ModelServiceClient, RuleEngineClient
 from sentinel_shared.config import CommonSettings, get_common_settings
@@ -29,6 +21,7 @@ from sentinel_shared.schemas.decision import (
     DecisionRequest,
     DecisionResponse,
     DependencyStatus,
+    ModelContribution,
     RuleHit,
 )
 from sentinel_shared.schemas.events import EventEnvelope, EventType
@@ -44,6 +37,13 @@ from sentinel_shared.telemetry import (
 from sentinel_shared.utils.database import create_async_engine_and_session
 from sentinel_shared.utils.fastapi import build_app
 from sentinel_shared.utils.kafka import JsonProducer
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+from sqlalchemy import JSON, Boolean, DateTime, Float, String, desc, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 logger = get_logger(__name__)
 limiter = Limiter(key_func=get_remote_address)
@@ -73,7 +73,9 @@ class AppState:
     def __init__(self, settings: CommonSettings) -> None:
         self.settings = settings
         self.engine, self.session_factory = create_async_engine_and_session(settings.database_url)
-        self.producer = JsonProducer(settings.kafka_bootstrap_servers, service_name=settings.service_name)
+        self.producer = JsonProducer(
+            settings.kafka_bootstrap_servers, service_name=settings.service_name
+        )
         self.consumer = AIOKafkaConsumer(
             settings.raw_events_topic,
             bootstrap_servers=settings.kafka_bootstrap_servers,
@@ -108,7 +110,9 @@ def _empty_features() -> FeatureLookupResponse:
     )
 
 
-def _heuristic_score(event: EventEnvelope, features: FeatureSnapshot, rule_hits: list[RuleHit]) -> tuple[float, float]:
+def _heuristic_score(
+    event: EventEnvelope, features: FeatureSnapshot, rule_hits: list[RuleHit]
+) -> tuple[float, float]:
     score = (
         0.08 * features.failed_login_count_5m
         + 0.15 * features.txn_velocity_10m
@@ -140,13 +144,17 @@ def _combine_decision(
         rationale.append(f"Hard deny rules triggered: {', '.join(hit.name for hit in hard_deny)}")
         return DecisionOutcome.DENY, rationale
     if review_hits:
-        rationale.append(f"Manual review rules triggered: {', '.join(hit.name for hit in review_hits)}")
+        rationale.append(
+            f"Manual review rules triggered: {', '.join(hit.name for hit in review_hits)}"
+        )
         return DecisionOutcome.MANUAL_REVIEW, rationale
     if risk_score >= settings.decision_deny_threshold and confidence >= 0.65:
         rationale.append(f"Model risk score {risk_score:.2f} exceeded deny threshold.")
         return DecisionOutcome.DENY, rationale
     if challenge_hits:
-        rationale.append(f"Challenge rules triggered: {', '.join(hit.name for hit in challenge_hits)}")
+        rationale.append(
+            f"Challenge rules triggered: {', '.join(hit.name for hit in challenge_hits)}"
+        )
         return DecisionOutcome.CHALLENGE, rationale
     if risk_score >= settings.decision_challenge_threshold:
         rationale.append(f"Model risk score {risk_score:.2f} exceeded challenge threshold.")
@@ -212,7 +220,7 @@ async def score_event(state: AppState, event: EventEnvelope) -> DecisionResponse
         active_model_name: str | None = None
         candidate_model_name: str | None = None
         shadow_divergence = False
-        contributions = []
+        contributions: list[ModelContribution] = []
         metadata: dict[str, object] = {
             "feature_source": feature_response.source,
             "feature_cache_hit": feature_response.cache_hit,
@@ -240,7 +248,9 @@ async def score_event(state: AppState, event: EventEnvelope) -> DecisionResponse
             if isinstance(rules_result, Exception):
                 dependency_status.rule_engine = rules_result.__class__.__name__
                 degraded = True
-                logger.warning("rule_engine_failed", event_id=str(event.event_id), error=str(rules_result))
+                logger.warning(
+                    "rule_engine_failed", event_id=str(event.event_id), error=str(rules_result)
+                )
             else:
                 rule_hits = rules_result.hits
 
@@ -249,8 +259,12 @@ async def score_event(state: AppState, event: EventEnvelope) -> DecisionResponse
                 degraded = True
                 metadata["scoring_mode"] = "heuristic_fallback"
                 metadata["fallback_reason"] = "model_service_unavailable"
-                risk_score, confidence = _heuristic_score(event, feature_response.snapshot, rule_hits)
-                logger.warning("model_service_failed", event_id=str(event.event_id), error=str(model_result))
+                risk_score, confidence = _heuristic_score(
+                    event, feature_response.snapshot, rule_hits
+                )
+                logger.warning(
+                    "model_service_failed", event_id=str(event.event_id), error=str(model_result)
+                )
             else:
                 risk_score = model_result.risk_score
                 confidence = model_result.confidence
@@ -349,7 +363,9 @@ async def consume_forever(app) -> None:
                         reason=str(exc),
                         raw_payload=json.dumps(message.value),
                     )
-                    dead_letter_events_total.labels(state.settings.service_name, exc.__class__.__name__).inc()
+                    dead_letter_events_total.labels(
+                        state.settings.service_name, exc.__class__.__name__
+                    ).inc()
                     logger.exception("decision_consumer_failed", error=str(exc))
                 finally:
                     clear_log_context()
@@ -359,7 +375,7 @@ async def consume_forever(app) -> None:
 
 
 @asynccontextmanager
-async def lifespan(app):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     state = AppState(get_common_settings())
     app.state.container = state
     async with state.engine.begin() as connection:
@@ -389,7 +405,7 @@ def get_state(request: Request) -> AppState:
     return request.app.state.container
 
 
-async def get_session(request: Request) -> AsyncSession:
+async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     state = get_state(request)
     async with state.session_factory() as session:
         yield session

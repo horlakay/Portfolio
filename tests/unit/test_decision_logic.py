@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+from decision_service.main import _combine_decision, _heuristic_score
 from sentinel_shared.config import CommonSettings
 from sentinel_shared.schemas.decision import DecisionOutcome, RuleHit, RuleSeverity
 from sentinel_shared.schemas.events import EventEnvelope, EventType
 from sentinel_shared.schemas.features import FeatureSnapshot
-from decision_service.main import _combine_decision, _heuristic_score
 
 
 def test_hard_deny_rule_overrides_model() -> None:
-    event = EventEnvelope(event_type=EventType.TRANSACTION_INITIATED, user_id="u1", account_id="a1", amount=5000)
+    event = EventEnvelope(
+        event_type=EventType.TRANSACTION_INITIATED, user_id="u1", account_id="a1", amount=5000
+    )
     outcome, rationale = _combine_decision(
         event,
         risk_score=0.3,

@@ -82,4 +82,3 @@ def require_roles(*roles: Role):
         return claims
 
     return dependency
-

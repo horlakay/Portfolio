@@ -43,4 +43,3 @@ class DriftMetric(BaseModel):
 class DriftReport(BaseModel):
     generated_at: datetime
     metrics: list[DriftMetric]
-

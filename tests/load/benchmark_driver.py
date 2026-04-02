@@ -11,7 +11,9 @@ from uuid import uuid4
 import httpx
 
 ROOT = Path(__file__).resolve().parents[2]
-BASE_PAYLOAD = {"event": json.loads((ROOT / "data" / "samples" / "transaction_initiated.json").read_text())}
+BASE_PAYLOAD = {
+    "event": json.loads((ROOT / "data" / "samples" / "transaction_initiated.json").read_text())
+}
 RESULTS_PATH = ROOT / "tests" / "load" / "results" / "latest_benchmark.json"
 
 

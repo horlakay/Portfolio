@@ -26,12 +26,14 @@ def build_event(index: int) -> dict:
             "country": random.choice(["US", "GB", "NG"]),
             "city": random.choice(["New York", "San Francisco", "London", "Lagos"]),
             "latitude": random.choice([40.7128, 37.7749, 51.5074, 6.5244]),
-            "longitude": random.choice([-74.0060, -122.4194, -0.1278, 3.3792])
+            "longitude": random.choice([-74.0060, -122.4194, -0.1278, 3.3792]),
         },
         "metadata": {
-            "auth_result": random.choice(["success", "failure"]) if event_type == "login_attempt" else None,
-            "mfa_present": bool(random.getrandbits(1))
-        }
+            "auth_result": random.choice(["success", "failure"])
+            if event_type == "login_attempt"
+            else None,
+            "mfa_present": bool(random.getrandbits(1)),
+        },
     }
     if event_type == "transaction_initiated":
         payload["amount"] = round(random.uniform(25, 3500), 2)
@@ -55,4 +57,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

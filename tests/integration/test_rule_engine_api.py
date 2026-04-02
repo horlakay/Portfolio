@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-
 from rule_engine.main import app
 
 
@@ -19,10 +18,9 @@ def test_rule_engine_returns_hits_for_obvious_case() -> None:
             "features": {
                 "new_device_flag": True,
                 "baseline_amount_deviation": 5,
-                "session_anomaly_score": 0.9
+                "session_anomaly_score": 0.9,
             },
         },
     )
     assert response.status_code == 200
     assert len(response.json()["hits"]) >= 1
-

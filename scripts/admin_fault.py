@@ -5,7 +5,6 @@ import asyncio
 import os
 
 import httpx
-
 from sentinel_shared.auth import Role, create_access_token
 from sentinel_shared.config import CommonSettings
 
@@ -24,7 +23,9 @@ async def main() -> None:
         else os.environ.get("FEATURE_SERVICE_URL", "http://feature-service:8002")
     )
     settings = CommonSettings()
-    token = os.environ.get("ADMIN_BEARER_TOKEN") or create_access_token("ops-admin", Role.ADMIN, settings)
+    token = os.environ.get("ADMIN_BEARER_TOKEN") or create_access_token(
+        "ops-admin", Role.ADMIN, settings
+    )
     payload = {"delay_ms": args.delay_ms, "cache_enabled": args.cache_enabled == "true"}
     if args.target == "model":
         payload = {"delay_ms": args.delay_ms, "error_rate": args.error_rate}

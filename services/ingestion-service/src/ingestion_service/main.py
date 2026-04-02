@@ -1,18 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
-from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
-from slowapi.util import get_remote_address
-from slowapi import _rate_limit_exceeded_handler
-from sqlalchemy import JSON, DateTime, String, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
 from sentinel_shared.config import CommonSettings, get_common_settings
 from sentinel_shared.logging import bind_log_context, get_logger
 from sentinel_shared.schemas.events import EventEnvelope, EventIngestResponse
@@ -20,6 +12,13 @@ from sentinel_shared.telemetry import events_ingested_total, get_tracer
 from sentinel_shared.utils.database import create_async_engine_and_session
 from sentinel_shared.utils.fastapi import build_app
 from sentinel_shared.utils.kafka import JsonProducer
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
+from sqlalchemy import JSON, DateTime, String, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 logger = get_logger(__name__)
 limiter = Limiter(key_func=get_remote_address)
@@ -45,11 +44,13 @@ class AppState:
     def __init__(self, settings: CommonSettings) -> None:
         self.settings = settings
         self.engine, self.session_factory = create_async_engine_and_session(settings.database_url)
-        self.producer = JsonProducer(settings.kafka_bootstrap_servers, service_name=settings.service_name)
+        self.producer = JsonProducer(
+            settings.kafka_bootstrap_servers, service_name=settings.service_name
+        )
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_common_settings()
     state = AppState(settings)
     app.state.container = state
@@ -72,7 +73,7 @@ def get_state(request: Request) -> AppState:
     return request.app.state.container
 
 
-async def get_session(request: Request) -> AsyncSession:
+async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     state: AppState = get_state(request)
     async with state.session_factory() as session:
         yield session
@@ -88,7 +89,9 @@ async def ingest_event(
 ) -> EventIngestResponse:
     state = get_state(request)
     effective_key = idempotency_key or event.idempotency_key
-    bind_log_context(event_id=str(event.event_id), account_id=event.account_id, event_type=event.event_type)
+    bind_log_context(
+        event_id=str(event.event_id), account_id=event.account_id, event_type=event.event_type
+    )
     with tracer.start_as_current_span("ingestion.accept_event") as span:
         span.set_attribute("app.event_id", str(event.event_id))
         span.set_attribute("app.account_id", event.account_id)
@@ -114,7 +117,9 @@ async def ingest_event(
                 )
 
         stored_at = datetime.now(tz=UTC)
-        payload = event.model_copy(update={"idempotency_key": effective_key}).model_dump(mode="json")
+        payload = event.model_copy(update={"idempotency_key": effective_key}).model_dump(
+            mode="json"
+        )
         row = IngestedEvent(
             event_id=str(event.event_id),
             idempotency_key=effective_key,

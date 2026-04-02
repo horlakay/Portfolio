@@ -3,9 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pytest
-
 from decision_service.main import score_event
-from sentinel_shared.schemas.decision import DecisionOutcome, RuleEvaluationResponse, RuleHit, RuleSeverity
+from sentinel_shared.schemas.decision import (
+    DecisionOutcome,
+    RuleEvaluationResponse,
+    RuleHit,
+    RuleSeverity,
+)
 from sentinel_shared.schemas.events import EventEnvelope, EventType
 from sentinel_shared.schemas.features import FeatureLookupResponse, FeatureSnapshot
 from sentinel_shared.schemas.model import ModelScoreResponse
@@ -26,7 +30,9 @@ class FakeFeatureClient:
 
 
 class FakeRuleClient:
-    async def evaluate(self, event: EventEnvelope, features: FeatureLookupResponse) -> RuleEvaluationResponse:
+    async def evaluate(
+        self, event: EventEnvelope, features: FeatureLookupResponse
+    ) -> RuleEvaluationResponse:
         return RuleEvaluationResponse(
             hits=[
                 RuleHit(
@@ -41,7 +47,9 @@ class FakeRuleClient:
 
 
 class FakeModelClient:
-    async def score(self, event: EventEnvelope, features: FeatureLookupResponse) -> ModelScoreResponse:
+    async def score(
+        self, event: EventEnvelope, features: FeatureLookupResponse
+    ) -> ModelScoreResponse:
         return ModelScoreResponse(
             risk_score=0.98,
             confidence=0.91,
@@ -81,4 +89,3 @@ async def test_suspicious_sequence_denies_transaction() -> None:
     decision = await score_event(state, event)
     assert decision.outcome == DecisionOutcome.DENY
     assert any("Hard deny" in rationale for rationale in decision.rationale)
-

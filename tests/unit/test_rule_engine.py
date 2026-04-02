@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from sentinel_shared.schemas.decision import RuleSeverity
 from rule_engine.main import app, evaluate_expression
+from sentinel_shared.schemas.decision import RuleSeverity
 
 
 def test_safe_rule_expression_evaluates() -> None:

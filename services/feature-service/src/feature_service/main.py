@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -15,10 +16,6 @@ from opentelemetry.trace import SpanKind
 from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 from redis.asyncio import from_url as redis_from_url
-from sqlalchemy import JSON, DateTime, Float, Integer, String, desc, distinct, func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-
 from sentinel_shared.auth import Role, require_roles
 from sentinel_shared.config import CommonSettings, get_common_settings
 from sentinel_shared.logging import bind_log_context, clear_log_context, get_logger
@@ -36,6 +33,9 @@ from sentinel_shared.utils.database import create_async_engine_and_session
 from sentinel_shared.utils.fastapi import build_app
 from sentinel_shared.utils.geo import is_impossible_travel
 from sentinel_shared.utils.kafka import JsonProducer
+from sqlalchemy import JSON, DateTime, Float, Integer, String, desc, distinct, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 logger = get_logger(__name__)
 tracer = get_tracer(__name__)
@@ -77,8 +77,12 @@ class AccountProfile(Base):
     known_regions: Mapped[list[str]] = mapped_column(JSON, default=list)
     avg_txn_amount_30d: Mapped[float] = mapped_column(Float, default=0.0)
     txn_count_30d: Mapped[int] = mapped_column(Integer, default=0)
-    last_password_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    last_successful_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_password_reset_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_successful_login_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     last_login_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     last_login_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
 
@@ -123,7 +127,9 @@ def _append_unique(values: list[str], candidate: str | None) -> list[str]:
 
 
 async def process_event(session: AsyncSession, state: AppState, event: EventEnvelope) -> None:
-    with tracer.start_as_current_span("feature_service.process_event", kind=SpanKind.CONSUMER) as span:
+    with tracer.start_as_current_span(
+        "feature_service.process_event", kind=SpanKind.CONSUMER
+    ) as span:
         span.set_attribute("app.event_id", str(event.event_id))
         span.set_attribute("app.account_id", event.account_id)
         existing = await session.get(FeatureEvent, str(event.event_id))
@@ -157,7 +163,9 @@ async def process_event(session: AsyncSession, state: AppState, event: EventEnve
             current_count = profile.txn_count_30d or 0
             current_avg = profile.avg_txn_amount_30d or 0.0
             updated_count = current_count + 1
-            profile.avg_txn_amount_30d = ((current_avg * current_count) + event.amount) / updated_count
+            profile.avg_txn_amount_30d = (
+                (current_avg * current_count) + event.amount
+            ) / updated_count
             profile.txn_count_30d = updated_count
 
         session.add(
@@ -186,7 +194,9 @@ async def process_event(session: AsyncSession, state: AppState, event: EventEnve
             feature_cache_operations_total.labels("delete", "success").inc()
         except Exception as exc:
             feature_cache_operations_total.labels("delete", "error").inc()
-            logger.warning("feature_cache_invalidation_failed", error=str(exc), account_id=event.account_id)
+            logger.warning(
+                "feature_cache_invalidation_failed", error=str(exc), account_id=event.account_id
+            )
 
 
 def _history_filters(event: EventEnvelope, start: datetime | None = None) -> list:
@@ -232,8 +242,12 @@ async def _previous_successful_login(
 def derive_feature_snapshot(base: dict[str, Any], event: EventEnvelope) -> FeatureSnapshot:
     impossible_travel = is_impossible_travel(
         float(base["last_login_latitude"]) if base.get("last_login_latitude") is not None else None,
-        float(base["last_login_longitude"]) if base.get("last_login_longitude") is not None else None,
-        datetime.fromisoformat(base["last_successful_login_at"]) if base.get("last_successful_login_at") else None,
+        float(base["last_login_longitude"])
+        if base.get("last_login_longitude") is not None
+        else None,
+        datetime.fromisoformat(base["last_successful_login_at"])
+        if base.get("last_successful_login_at")
+        else None,
         event.geolocation.latitude if event.geolocation else None,
         event.geolocation.longitude if event.geolocation else None,
         event.timestamp,
@@ -246,8 +260,7 @@ def derive_feature_snapshot(base: dict[str, Any], event: EventEnvelope) -> Featu
     )
     new_device_flag = bool(event.device_id and event.device_id not in base.get("known_devices", []))
     new_region_flag = bool(
-        event.geolocation
-        and event.geolocation.region not in base.get("known_regions", [])
+        event.geolocation and event.geolocation.region not in base.get("known_regions", [])
     )
     high_risk_hour_flag = event.timestamp.hour in {0, 1, 2, 3, 4, 5}
     session_anomaly_score = round(
@@ -292,7 +305,9 @@ async def build_feature_snapshot(
         historical_regions: list[str] = []
         prior_login: FeatureEvent | None = None
         cache_hit = False
-        current_event_already_indexed = await session.get(FeatureEvent, str(event.event_id)) is not None
+        current_event_already_indexed = (
+            await session.get(FeatureEvent, str(event.event_id)) is not None
+        )
 
         base: dict[str, Any] = {}
         if state.fault.cache_enabled and not current_event_already_indexed:
@@ -306,7 +321,9 @@ async def build_feature_snapshot(
                     feature_cache_operations_total.labels("get", "miss").inc()
             except Exception as exc:
                 feature_cache_operations_total.labels("get", "error").inc()
-                logger.warning("feature_cache_get_failed", error=str(exc), account_id=event.account_id)
+                logger.warning(
+                    "feature_cache_get_failed", error=str(exc), account_id=event.account_id
+                )
         else:
             feature_cache_operations_total.labels("get", "disabled").inc()
 
@@ -338,20 +355,17 @@ async def build_feature_snapshot(
                 ),
             )
             distinct_devices_7d = await session.scalar(
-                select(func.count(distinct(FeatureEvent.device_id)))
-                .where(
+                select(func.count(distinct(FeatureEvent.device_id))).where(
                     *_history_filters(event, windows["distinct_devices_7d"]),
                 ),
             )
             distinct_ips_24h = await session.scalar(
-                select(func.count(distinct(FeatureEvent.ip_address)))
-                .where(
+                select(func.count(distinct(FeatureEvent.ip_address))).where(
                     *_history_filters(event, windows["distinct_ips_24h"]),
                 ),
             )
             avg_txn_amount_30d = await session.scalar(
-                select(func.avg(FeatureEvent.amount))
-                .where(
+                select(func.avg(FeatureEvent.amount)).where(
                     *_history_filters(event, now - timedelta(days=30)),
                     FeatureEvent.event_type.in_(
                         [EventType.TRANSACTION_INITIATED, EventType.TRANSACTION_COMPLETED],
@@ -378,15 +392,15 @@ async def build_feature_snapshot(
             )
             device_reuse_accounts = 0
             if event.device_id:
-                device_reuse_accounts = await session.scalar(
-                    select(func.count(distinct(FeatureEvent.account_id)))
-                    .where(
+                reuse_count = await session.scalar(
+                    select(func.count(distinct(FeatureEvent.account_id))).where(
                         FeatureEvent.device_id == event.device_id,
                         FeatureEvent.event_id != str(event.event_id),
                         FeatureEvent.occurred_at >= now - timedelta(hours=24),
                         FeatureEvent.occurred_at <= now,
                     ),
                 )
+                device_reuse_accounts = reuse_count or 0
             historical_devices = await _history_distinct_values(
                 session,
                 FeatureEvent.device_id,
@@ -413,9 +427,7 @@ async def build_feature_snapshot(
                 "known_devices": historical_devices,
                 "known_regions": historical_regions,
                 "last_successful_login_at": (
-                    prior_login.occurred_at.isoformat()
-                    if prior_login is not None
-                    else None
+                    prior_login.occurred_at.isoformat() if prior_login is not None else None
                 ),
                 "last_login_latitude": prior_login.latitude if prior_login is not None else None,
                 "last_login_longitude": prior_login.longitude if prior_login is not None else None,
@@ -426,7 +438,9 @@ async def build_feature_snapshot(
                     feature_cache_operations_total.labels("set", "success").inc()
                 except Exception as exc:
                     feature_cache_operations_total.labels("set", "error").inc()
-                    logger.warning("feature_cache_set_failed", error=str(exc), account_id=event.account_id)
+                    logger.warning(
+                        "feature_cache_set_failed", error=str(exc), account_id=event.account_id
+                    )
 
         snapshot = derive_feature_snapshot(base, event)
         span.set_attribute("app.cache_hit", cache_hit)
@@ -473,7 +487,9 @@ async def consume_forever(app: FastAPI) -> None:
                             reason=str(exc),
                             raw_payload=raw_payload,
                         )
-                        dead_letter_events_total.labels(state.settings.service_name, exc.__class__.__name__).inc()
+                        dead_letter_events_total.labels(
+                            state.settings.service_name, exc.__class__.__name__
+                        ).inc()
                         logger.exception("feature_event_failed", error=str(exc))
                     finally:
                         clear_log_context()
@@ -483,7 +499,7 @@ async def consume_forever(app: FastAPI) -> None:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_common_settings()
     engine, session_factory = create_async_engine_and_session(settings.database_url)
     redis = redis_from_url(settings.redis_url, decode_responses=True)
@@ -527,7 +543,7 @@ def get_state(request: Request) -> AppState:
     return request.app.state.container
 
 
-async def get_session(request: Request) -> AsyncSession:
+async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     state = get_state(request)
     async with state.session_factory() as session:
         yield session
@@ -577,5 +593,7 @@ async def update_faults(
 ) -> dict:
     state = get_state(request)
     state.fault = fault
-    logger.info("feature_faults_updated", delay_ms=fault.delay_ms, cache_enabled=fault.cache_enabled)
+    logger.info(
+        "feature_faults_updated", delay_ms=fault.delay_ms, cache_enabled=fault.cache_enabled
+    )
     return {"updated": True, "fault": fault.model_dump()}

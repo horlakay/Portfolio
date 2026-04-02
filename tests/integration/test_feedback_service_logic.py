@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
-
 from feedback_service.main import DecisionRecord, submit_feedback
 from sentinel_shared.auth import Role, TokenClaims
 from sentinel_shared.config import CommonSettings

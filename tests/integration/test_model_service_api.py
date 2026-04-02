@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-
+from model_service.main import app
 from sentinel_shared.auth import Role, create_access_token
 from sentinel_shared.config import CommonSettings
-from model_service.main import app
 
 
 def test_model_score_endpoint_returns_active_and_candidate_scores() -> None:

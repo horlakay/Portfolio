@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 from fastapi import Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-
 from sentinel_shared.auth import Role, require_roles
 from sentinel_shared.config import CommonSettings, get_common_settings
 from sentinel_shared.logging import get_logger
@@ -36,7 +35,14 @@ from sentinel_shared.telemetry import (
     shadow_model_divergence_total,
 )
 from sentinel_shared.utils.fastapi import build_app
-from training.pipelines.common import EVAL_DIR, FEATURE_COLUMNS, MODEL_DIR, ensure_models, feature_vector
+
+from training.pipelines.common import (
+    EVAL_DIR,
+    FEATURE_COLUMNS,
+    MODEL_DIR,
+    ensure_models,
+    feature_vector,
+)
 
 logger = get_logger(__name__)
 tracer = get_tracer(__name__)
@@ -147,7 +153,9 @@ async def score_event(payload: ModelScoreRequest, request: Request) -> ModelScor
         if state.fault.error_rate and random.random() < state.fault.error_rate:
             raise HTTPException(status_code=503, detail="Injected model failure")
 
-        vector = np.array(feature_vector(payload.event, payload.features), dtype=float).reshape(1, -1)
+        vector = np.array(feature_vector(payload.event, payload.features), dtype=float).reshape(
+            1, -1
+        )
         vector_frame = pd.DataFrame(vector, columns=FEATURE_COLUMNS)
         active_model = state.active_artifact["model"]
         risk_score = float(active_model.predict_proba(vector_frame)[0][1])
@@ -169,7 +177,9 @@ async def score_event(payload: ModelScoreRequest, request: Request) -> ModelScor
                 (risk_score >= 0.7) != (candidate_score >= 0.7)
             )
             state.last_compared_at = datetime.now(tz=UTC)
-            model_score_distribution.labels(state.candidate_metadata["name"]).observe(candidate_score)
+            model_score_distribution.labels(state.candidate_metadata["name"]).observe(
+                candidate_score
+            )
             if divergence:
                 state.divergence_count += 1
                 shadow_model_divergence_total.labels(
@@ -291,7 +301,9 @@ async def promote_shadow(
     if not get_state(request).settings.shadow_model_enabled:
         raise HTTPException(status_code=400, detail="Shadow model support is disabled")
     shutil.copyfile(MODEL_DIR / "candidate" / "model.joblib", MODEL_DIR / "active" / "model.joblib")
-    shutil.copyfile(MODEL_DIR / "candidate" / "metadata.json", MODEL_DIR / "active" / "metadata.json")
+    shutil.copyfile(
+        MODEL_DIR / "candidate" / "metadata.json", MODEL_DIR / "active" / "metadata.json"
+    )
     app.state.container = _load_state(get_common_settings())
     registry = _registry_payload()
     registry["generated_at"] = datetime.now(tz=UTC).isoformat()

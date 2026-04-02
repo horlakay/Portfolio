@@ -1,2 +1,1 @@
 """SentinelStream model service."""
-

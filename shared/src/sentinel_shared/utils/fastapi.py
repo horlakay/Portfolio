@@ -3,13 +3,18 @@ from __future__ import annotations
 from time import perf_counter
 from uuid import uuid4
 
-from opentelemetry import trace
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
+from opentelemetry import trace
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from sentinel_shared.config import CommonSettings
-from sentinel_shared.logging import bind_log_context, clear_log_context, configure_logging, get_logger
+from sentinel_shared.logging import (
+    bind_log_context,
+    clear_log_context,
+    configure_logging,
+    get_logger,
+)
 from sentinel_shared.telemetry import (
     active_http_requests,
     instrument_app,
@@ -96,7 +101,9 @@ def build_app(settings: CommonSettings) -> FastAPI:
 
     @app.exception_handler(Exception)
     async def unhandled_exception(_: Request, exc: Exception) -> JSONResponse:
-        logger.exception("unhandled_exception", error=str(exc), exception_type=exc.__class__.__name__)
+        logger.exception(
+            "unhandled_exception", error=str(exc), exception_type=exc.__class__.__name__
+        )
         return JSONResponse(
             status_code=500,
             content={"detail": "internal_server_error", "service": settings.service_name},

@@ -10,7 +10,14 @@ from .decision import (
     RuleHit,
     RuleSeverity,
 )
-from .events import EventEnvelope, EventIngestResponse, EventMetadata, EventType, GeoLocation, LoginOutcome
+from .events import (
+    EventEnvelope,
+    EventIngestResponse,
+    EventMetadata,
+    EventType,
+    GeoLocation,
+    LoginOutcome,
+)
 from .features import DriftMetric, DriftReport, FeatureLookupResponse, FeatureSnapshot
 from .feedback import FeedbackDecisionContext, FeedbackLabel, FeedbackRecord, FeedbackSubmission
 from .model import (

@@ -3,6 +3,7 @@ name: Deploy Dev
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,6 +15,7 @@ concurrency:
 
 jobs:
   build-and-push:
+    if: ${{ vars.ECR_REGISTRY != '' && secrets.AWS_DEPLOY_ROLE_ARN != '' }}
     runs-on: ubuntu-latest
     environment: dev
     strategy:
@@ -61,6 +63,7 @@ jobs:
           severity: HIGH,CRITICAL
 
   deploy-dev:
+    if: ${{ vars.ECR_REGISTRY != '' && vars.EKS_CLUSTER_NAME != '' && vars.POSTGRES_HOST != '' && vars.KAFKA_BOOTSTRAP_SERVERS != '' && secrets.AWS_DEPLOY_ROLE_ARN != '' && secrets.JWT_SECRET != '' && secrets.ANALYST_CONSOLE_PASSWORD != '' && secrets.POSTGRES_PASSWORD != '' && secrets.REDIS_URL != '' }}
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: dev

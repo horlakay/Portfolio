@@ -6,10 +6,10 @@ from typing import Any
 
 from fastapi import FastAPI
 from opentelemetry import trace
-from opentelemetry.propagate import extract, inject
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+from opentelemetry.propagate import extract, inject
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
@@ -29,7 +29,9 @@ def _build_provider(service_name: str, environment: str, endpoint: str) -> Trace
     provider = TracerProvider(resource=resource)
     sdk_disabled = os.getenv("OTEL_SDK_DISABLED", "").lower() in {"1", "true", "yes"}
     if not sdk_disabled and environment != "test" and endpoint:
-        provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True)))
+        provider.add_span_processor(
+            BatchSpanProcessor(OTLPSpanExporter(endpoint=endpoint, insecure=True))
+        )
     return provider
 
 
@@ -57,8 +59,5 @@ def inject_trace_headers(headers: dict[str, str] | None = None) -> list[tuple[st
 
 
 def extract_trace_context(headers: list[tuple[str, bytes]] | None) -> Any:
-    carrier = {
-        key: value.decode("utf-8", errors="ignore")
-        for key, value in (headers or [])
-    }
+    carrier = {key: value.decode("utf-8", errors="ignore") for key, value in (headers or [])}
     return extract(carrier)

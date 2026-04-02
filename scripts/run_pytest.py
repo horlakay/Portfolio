@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 from _pytest import pathlib as pytest_pathlib
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 

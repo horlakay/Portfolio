@@ -52,7 +52,10 @@ def _mask_ip(value: str) -> str:
 
 def sanitize(value: Any, key: str | None = None) -> Any:
     if isinstance(value, dict):
-        return {nested_key: sanitize(nested_value, nested_key) for nested_key, nested_value in value.items()}
+        return {
+            nested_key: sanitize(nested_value, nested_key)
+            for nested_key, nested_value in value.items()
+        }
     if isinstance(value, list):
         return [sanitize(item, key) for item in value]
     if isinstance(value, str) and key and key.lower() in SENSITIVE_KEYS:

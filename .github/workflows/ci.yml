@@ -35,30 +35,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/setup-python@v5
         with:
-          terraform_version: "1.8.5"
-      - uses: azure/setup-helm@v4
-        with:
-          version: "v3.15.4"
-      - name: Terraform fmt
-        run: terraform fmt -check -recursive infra/terraform
-      - name: Terraform validate dev
+          python-version: "3.12"
+      - name: Install validation dependencies
         run: |
-          terraform -chdir=infra/terraform/environments/dev init -backend=false
-          terraform -chdir=infra/terraform/environments/dev validate
-      - name: Terraform validate prod
-        run: |
-          terraform -chdir=infra/terraform/environments/prod init -backend=false
-          terraform -chdir=infra/terraform/environments/prod validate
-      - name: Helm lint
-        run: |
-          helm lint infra/helm/sentinelstream -f infra/helm/sentinelstream/values-dev.yaml
-          helm lint infra/helm/sentinelstream -f infra/helm/sentinelstream/values-prod.yaml
-      - name: Helm template
-        run: |
-          helm template sentinelstream infra/helm/sentinelstream -f infra/helm/sentinelstream/values-dev.yaml > /dev/null
-          helm template sentinelstream infra/helm/sentinelstream -f infra/helm/sentinelstream/values-prod.yaml > /dev/null
+          python -m pip install --upgrade pip
+          pip install .[dev]
+      - name: Delivery validation
+        run: python scripts/validate_delivery.py
 
   security:
     runs-on: ubuntu-latest

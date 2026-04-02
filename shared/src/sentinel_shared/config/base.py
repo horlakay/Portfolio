@@ -27,13 +27,23 @@ class CommonSettings(BaseSettings):
     feedback_topic: str = Field(default="sentinel.events.feedback", alias="FEEDBACK_TOPIC")
     dlq_topic: str = Field(default="sentinel.events.dlq", alias="DLQ_TOPIC")
 
-    feature_service_url: str = Field(default="http://feature-service:8002", alias="FEATURE_SERVICE_URL")
+    feature_service_url: str = Field(
+        default="http://feature-service:8002", alias="FEATURE_SERVICE_URL"
+    )
     rule_engine_url: str = Field(default="http://rule-engine:8003", alias="RULE_ENGINE_URL")
     model_service_url: str = Field(default="http://model-service:8004", alias="MODEL_SERVICE_URL")
-    decision_service_url: str = Field(default="http://decision-service:8005", alias="DECISION_SERVICE_URL")
-    feedback_service_url: str = Field(default="http://feedback-service:8006", alias="FEEDBACK_SERVICE_URL")
-    ingestion_service_url: str = Field(default="http://ingestion-service:8001", alias="INGESTION_SERVICE_URL")
-    analyst_console_url: str = Field(default="http://analyst-console:8007", alias="ANALYST_CONSOLE_URL")
+    decision_service_url: str = Field(
+        default="http://decision-service:8005", alias="DECISION_SERVICE_URL"
+    )
+    feedback_service_url: str = Field(
+        default="http://feedback-service:8006", alias="FEEDBACK_SERVICE_URL"
+    )
+    ingestion_service_url: str = Field(
+        default="http://ingestion-service:8001", alias="INGESTION_SERVICE_URL"
+    )
+    analyst_console_url: str = Field(
+        default="http://analyst-console:8007", alias="ANALYST_CONSOLE_URL"
+    )
 
     jwt_secret: str = Field(default="change-me", alias="JWT_SECRET")
     jwt_issuer: str = Field(default="sentinelstream", alias="JWT_ISSUER")
@@ -65,4 +75,3 @@ class CommonSettings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_common_settings() -> CommonSettings:
     return CommonSettings()
-

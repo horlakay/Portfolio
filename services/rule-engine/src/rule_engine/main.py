@@ -7,7 +7,6 @@ from typing import Any
 import yaml
 from fastapi import Depends, HTTPException
 from pydantic import BaseModel
-
 from sentinel_shared.auth import Role, require_roles
 from sentinel_shared.config import get_common_settings
 from sentinel_shared.logging import get_logger
@@ -113,11 +112,11 @@ class SafeEvaluator(ast.NodeVisitor):
                 return False
             if isinstance(operator, ast.LtE) and not (left <= right):
                 return False
-            if isinstance(operator, ast.Eq) and not (left == right):
+            if isinstance(operator, ast.Eq) and left != right:
                 return False
-            if isinstance(operator, ast.NotEq) and not (left != right):
+            if isinstance(operator, ast.NotEq) and left == right:
                 return False
-            if isinstance(operator, ast.In) and not (left in right):
+            if isinstance(operator, ast.In) and left not in right:
                 return False
             if isinstance(operator, ast.NotIn) and not (left not in right):
                 return False

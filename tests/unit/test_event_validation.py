@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
-
 from sentinel_shared.schemas.events import EventEnvelope, EventType, GeoLocation
 
 
@@ -31,4 +30,3 @@ def test_event_validation_accepts_geolocation() -> None:
     )
     assert event.geolocation is not None
     assert event.geolocation.region == "US-NY"
-

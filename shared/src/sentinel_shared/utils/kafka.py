@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-from time import perf_counter
 from datetime import UTC, datetime
+from time import perf_counter
 from typing import Any
 
 from aiokafka import AIOKafkaProducer
@@ -16,6 +16,7 @@ from sentinel_shared.telemetry import (
     inject_trace_headers,
     stream_events_published_total,
 )
+
 
 def dumps(payload: dict[str, Any]) -> bytes:
     return json.dumps(payload, default=str).encode("utf-8")

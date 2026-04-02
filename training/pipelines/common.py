@@ -11,12 +11,11 @@ from typing import Any
 import joblib
 import numpy as np
 import pandas as pd
+from sentinel_shared.schemas.events import EventEnvelope, EventType
+from sentinel_shared.schemas.features import FeatureSnapshot
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import train_test_split
-
-from sentinel_shared.schemas.events import EventEnvelope, EventType
-from sentinel_shared.schemas.features import FeatureSnapshot
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data" / "synthetic"
@@ -129,9 +128,7 @@ def generate_synthetic_dataset(rows: int = 8000, seed: int = 42) -> pd.DataFrame
         account_age_days = max(0, int(rng.gamma(4.0, 45)))
         device_reuse_score = max(0.0, float(rng.gamma(1.5, 0.8)))
         baseline_amount_deviation = (
-            abs(amount - avg_txn_amount_30d) / max(avg_txn_amount_30d, 1.0)
-            if amount
-            else 0.0
+            abs(amount - avg_txn_amount_30d) / max(avg_txn_amount_30d, 1.0) if amount else 0.0
         )
         session_anomaly_score = round(
             0.30 * new_device_flag
@@ -216,7 +213,9 @@ class TrainingArtifacts:
     dataset_manifest_path: Path
 
 
-def _classification_metrics(probabilities: np.ndarray, labels: pd.Series, threshold: float) -> dict[str, float | int]:
+def _classification_metrics(
+    probabilities: np.ndarray, labels: pd.Series, threshold: float
+) -> dict[str, float | int]:
     predicted = (probabilities >= threshold).astype(int)
     tp = int(((predicted == 1) & (labels == 1)).sum())
     tn = int(((predicted == 0) & (labels == 0)).sum())

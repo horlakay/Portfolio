@@ -89,4 +89,3 @@ class DecisionRecordSummary(BaseModel):
     confidence: float
     degraded_mode: bool
     decided_at: datetime
-

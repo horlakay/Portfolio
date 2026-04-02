@@ -13,7 +13,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SAMPLES = ROOT / "data" / "samples"
 
 
-async def post_json(client: httpx.AsyncClient, path: str, payload: dict, headers: dict | None = None) -> None:
+async def post_json(
+    client: httpx.AsyncClient, path: str, payload: dict, headers: dict | None = None
+) -> None:
     response = await client.post(path, json=payload, headers=headers or {})
     response.raise_for_status()
     print(f"{path} -> {response.status_code}")
@@ -36,7 +38,9 @@ async def main() -> None:
     async with httpx.AsyncClient(base_url=ingestion_url, timeout=10.0) as ingestion_client:
         await post_json(ingestion_client, "/v1/events", login, {"Idempotency-Key": "demo-login-1"})
         await post_json(ingestion_client, "/v1/events", reset, {"Idempotency-Key": "demo-reset-1"})
-        await post_json(ingestion_client, "/v1/events", transaction, {"Idempotency-Key": "demo-txn-1"})
+        await post_json(
+            ingestion_client, "/v1/events", transaction, {"Idempotency-Key": "demo-txn-1"}
+        )
 
     await asyncio.sleep(2)
 

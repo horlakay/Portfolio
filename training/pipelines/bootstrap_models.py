@@ -7,7 +7,9 @@ from training.pipelines.common import DEFAULT_DATASET_PATH, DEFAULT_MANIFEST_PAT
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Bootstrap models and synthetic dataset if missing.")
+    parser = argparse.ArgumentParser(
+        description="Bootstrap models and synthetic dataset if missing."
+    )
     parser.add_argument("--rows", type=int, default=8000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET_PATH)

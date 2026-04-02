@@ -9,4 +9,3 @@ __all__ = [
     "haversine_km",
     "is_impossible_travel",
 ]
-

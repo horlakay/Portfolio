@@ -1,2 +1,1 @@
 """SentinelStream ingestion service."""
-
