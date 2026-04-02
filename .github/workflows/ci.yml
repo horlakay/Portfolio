@@ -60,7 +60,7 @@ jobs:
       - name: Python dependency audit
         run: pip-audit --progress-spinner off
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
           scan-type: fs
           scan-ref: .
