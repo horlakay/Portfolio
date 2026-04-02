@@ -70,16 +70,13 @@ jobs:
             ${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - name: Install Trivy
-        if: steps.preflight.outputs.ready == 'true'
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b "${HOME}/.local/bin" v0.65.0
-          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
       - name: Scan pushed image
         if: steps.preflight.outputs.ready == 'true'
         run: |
-          trivy image \
+          docker run --rm \
+            -v "${HOME}/.docker:/root/.docker:ro" \
+            aquasec/trivy:0.65.0 \
+            image \
             --format table \
             --exit-code 1 \
             --ignore-unfixed \
