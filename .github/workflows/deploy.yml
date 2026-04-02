@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   build-and-push:
-    if: ${{ vars.ECR_REGISTRY != '' && secrets.AWS_DEPLOY_ROLE_ARN != '' }}
     runs-on: ubuntu-latest
     environment: dev
     strategy:
@@ -29,21 +28,39 @@ jobs:
           - feedback-service
           - analyst-console
     steps:
+      - name: Preflight deploy config
+        id: preflight
+        shell: bash
+        env:
+          ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+          AWS_DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          if [[ -n "${ECR_REGISTRY}" && -n "${AWS_DEPLOY_ROLE_ARN}" ]]; then
+            echo "ready=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "ready=false" >> "${GITHUB_OUTPUT}"
+          fi
       - uses: actions/checkout@v4
+        if: steps.preflight.outputs.ready == 'true'
       - uses: actions/setup-python@v5
+        if: steps.preflight.outputs.ready == 'true'
         with:
           python-version: "3.12"
       - name: Bootstrap model artifacts
+        if: steps.preflight.outputs.ready == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install .
           python training/pipelines/bootstrap_models.py --rows 12000 --seed 42
       - uses: aws-actions/configure-aws-credentials@v4
+        if: steps.preflight.outputs.ready == 'true'
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'eu-west-1' }}
       - uses: aws-actions/amazon-ecr-login@v2
+        if: steps.preflight.outputs.ready == 'true'
       - uses: docker/build-push-action@v6
+        if: steps.preflight.outputs.ready == 'true'
         with:
           context: .
           file: services/${{ matrix.service }}/Dockerfile
@@ -54,11 +71,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - name: Install Trivy
+        if: steps.preflight.outputs.ready == 'true'
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
             | sh -s -- -b "${HOME}/.local/bin" v0.65.0
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
       - name: Scan pushed image
+        if: steps.preflight.outputs.ready == 'true'
         run: |
           trivy image \
             --format table \
@@ -66,9 +85,11 @@ jobs:
             --ignore-unfixed \
             --severity HIGH,CRITICAL \
             "${{ vars.ECR_REGISTRY }}/sentinelstream/${{ matrix.service }}:${{ github.sha }}"
+      - name: Skip build when deploy config is absent
+        if: steps.preflight.outputs.ready != 'true'
+        run: echo "Skipping image build because the dev environment is missing ECR or AWS deploy credentials."
 
   deploy-dev:
-    if: ${{ vars.ECR_REGISTRY != '' && vars.EKS_CLUSTER_NAME != '' && vars.POSTGRES_HOST != '' && vars.KAFKA_BOOTSTRAP_SERVERS != '' && secrets.AWS_DEPLOY_ROLE_ARN != '' && secrets.JWT_SECRET != '' && secrets.ANALYST_CONSOLE_PASSWORD != '' && secrets.POSTGRES_PASSWORD != '' && secrets.REDIS_URL != '' }}
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: dev
@@ -77,27 +98,54 @@ jobs:
       KUBE_NAMESPACE: ${{ vars.KUBE_NAMESPACE || 'sentinelstream' }}
       RELEASE_NAME: sentinelstream
     steps:
+      - name: Preflight deployment config
+        id: preflight
+        shell: bash
+        env:
+          ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+          EKS_CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME }}
+          POSTGRES_HOST: ${{ vars.POSTGRES_HOST }}
+          KAFKA_BOOTSTRAP_SERVERS: ${{ vars.KAFKA_BOOTSTRAP_SERVERS }}
+          AWS_DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ANALYST_CONSOLE_PASSWORD: ${{ secrets.ANALYST_CONSOLE_PASSWORD }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+        run: |
+          if [[ -n "${ECR_REGISTRY}" && -n "${EKS_CLUSTER_NAME}" && -n "${POSTGRES_HOST}" && -n "${KAFKA_BOOTSTRAP_SERVERS}" && -n "${AWS_DEPLOY_ROLE_ARN}" && -n "${JWT_SECRET}" && -n "${ANALYST_CONSOLE_PASSWORD}" && -n "${POSTGRES_PASSWORD}" && -n "${REDIS_URL}" ]]; then
+            echo "ready=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "ready=false" >> "${GITHUB_OUTPUT}"
+          fi
       - uses: actions/checkout@v4
+        if: steps.preflight.outputs.ready == 'true'
       - uses: actions/setup-python@v5
+        if: steps.preflight.outputs.ready == 'true'
         with:
           python-version: "3.12"
       - uses: azure/setup-helm@v4
+        if: steps.preflight.outputs.ready == 'true'
         with:
           version: "v3.15.4"
       - uses: azure/setup-kubectl@v4
+        if: steps.preflight.outputs.ready == 'true'
         with:
           version: "v1.30.0"
       - uses: aws-actions/configure-aws-credentials@v4
+        if: steps.preflight.outputs.ready == 'true'
         with:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
       - name: Install benchmark dependencies
+        if: steps.preflight.outputs.ready == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install .
       - name: Update kubeconfig
+        if: steps.preflight.outputs.ready == 'true'
         run: aws eks update-kubeconfig --name "${{ vars.EKS_CLUSTER_NAME }}" --region "${AWS_REGION}"
       - name: Create namespace and application secret
+        if: steps.preflight.outputs.ready == 'true'
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           ANALYST_CONSOLE_PASSWORD: ${{ secrets.ANALYST_CONSOLE_PASSWORD }}
@@ -112,6 +160,7 @@ jobs:
             --from-literal=REDIS_URL="${REDIS_URL}" \
             --dry-run=client -o yaml | kubectl apply -f -
       - name: Deploy
+        if: steps.preflight.outputs.ready == 'true'
         run: |
           helm upgrade --install "${RELEASE_NAME}" infra/helm/sentinelstream \
             --namespace "${KUBE_NAMESPACE}" \
@@ -130,6 +179,7 @@ jobs:
             --wait \
             --timeout 10m
       - name: Verify rollouts
+        if: steps.preflight.outputs.ready == 'true'
         run: |
           kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-ingestion-service --timeout=5m
           kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-feature-service --timeout=5m
@@ -137,6 +187,7 @@ jobs:
           kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-model-service --timeout=5m
           kubectl -n "${KUBE_NAMESPACE}" rollout status deployment/sentinelstream-decision-service --timeout=5m
       - name: Smoke test and benchmark
+        if: steps.preflight.outputs.ready == 'true'
         run: |
           kubectl -n "${KUBE_NAMESPACE}" port-forward svc/sentinelstream-decision-service 18005:8005 > decision-port-forward.log 2>&1 &
           PORT_FORWARD_PID=$!
@@ -149,11 +200,13 @@ jobs:
           done
           BENCHMARK_RUNS=25 DECISION_SERVICE_URL=http://127.0.0.1:18005 python tests/load/benchmark_driver.py
       - name: Upload benchmark report
+        if: steps.preflight.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: decision-benchmark-${{ github.sha }}
           path: tests/load/results/latest_benchmark.json
       - name: Append deployment summary
+        if: steps.preflight.outputs.ready == 'true'
         run: |
           echo "## Dev deployment" >> "${GITHUB_STEP_SUMMARY}"
           echo "" >> "${GITHUB_STEP_SUMMARY}"
@@ -165,3 +218,6 @@ jobs:
           echo '```json' >> "${GITHUB_STEP_SUMMARY}"
           cat tests/load/results/latest_benchmark.json >> "${GITHUB_STEP_SUMMARY}"
           echo '```' >> "${GITHUB_STEP_SUMMARY}"
+      - name: Skip deploy when environment config is absent
+        if: steps.preflight.outputs.ready != 'true'
+        run: echo "Skipping dev deploy because required environment variables or secrets are not configured yet."
