@@ -8,7 +8,7 @@ config:
     port: 5432
     database: sentinelstream
     user: sentinel
-  kafkaBootstrapServers: sentinelstream-dev-redpanda.kafka.svc.cluster.local:9092
+  kafkaBootstrapServers: sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:9092
 
 ingress:
   enabled: false

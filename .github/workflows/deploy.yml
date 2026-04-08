@@ -174,9 +174,9 @@ jobs:
             --set-string config.postgres.user="${{ vars.POSTGRES_USER || 'sentinel' }}" \
             --set-string config.kafkaBootstrapServers="${{ vars.KAFKA_BOOTSTRAP_SERVERS }}" \
             --history-max 10 \
-            --atomic \
+            --debug \
             --wait \
-            --timeout 10m
+            --timeout 15m
       - name: Verify rollouts
         if: steps.preflight.outputs.ready == 'true'
         run: |
@@ -217,6 +217,22 @@ jobs:
           echo '```json' >> "${GITHUB_STEP_SUMMARY}"
           cat tests/load/results/latest_benchmark.json >> "${GITHUB_STEP_SUMMARY}"
           echo '```' >> "${GITHUB_STEP_SUMMARY}"
+      - name: Collect failure diagnostics
+        if: failure() && steps.preflight.outputs.ready == 'true'
+        shell: bash
+        run: |
+          echo "### Namespace snapshot"
+          kubectl get all -n "${KUBE_NAMESPACE}" -o wide || true
+          echo "### Recent events"
+          kubectl get events -n "${KUBE_NAMESPACE}" --sort-by=.metadata.creationTimestamp || true
+          for pod in $(kubectl get pods -n "${KUBE_NAMESPACE}" -o name 2>/dev/null); do
+            echo "::group::describe ${pod}"
+            kubectl describe -n "${KUBE_NAMESPACE}" "${pod}" || true
+            echo "::endgroup::"
+            echo "::group::logs ${pod}"
+            kubectl logs -n "${KUBE_NAMESPACE}" "${pod#pod/}" --all-containers --tail=200 || true
+            echo "::endgroup::"
+          done
       - name: Skip deploy when environment config is absent
         if: steps.preflight.outputs.ready != 'true'
         run: echo "Skipping dev deploy because required environment variables or secrets are not configured yet."
