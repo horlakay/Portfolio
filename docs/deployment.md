@@ -60,6 +60,8 @@ terraform plan
 terraform apply
 ```
 
+For AWS free-plan accounts, keep the dev node group on `m7i-flex.large` or another free-plan-eligible instance type. The repo now defaults dev to `m7i-flex.large` because `t3.large` will be rejected on accounts that enforce free-plan instance eligibility.
+
 Production:
 
 ```bash

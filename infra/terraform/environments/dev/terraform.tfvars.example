@@ -15,3 +15,7 @@ cluster_public_access_cidrs = [
 ]
 
 artifact_bucket_name = "sentinelstream-dev-artifacts-123456789012"
+
+node_instance_types = [
+  "m7i-flex.large",
+]

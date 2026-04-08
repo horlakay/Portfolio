@@ -139,6 +139,10 @@ admin_principal_arns = [
   "arn:aws:iam::<account-id>:role/platform-admin",
   "arn:aws:iam::<account-id>:role/sentinelstream-github-dev",
 ]
+
+node_instance_types = [
+  "m7i-flex.large",
+]
 ```
 
 Example `infra/terraform/environments/prod/terraform.tfvars`:
@@ -163,6 +167,8 @@ cp backend.hcl.example backend.hcl
 terraform init -backend-config=backend.hcl
 terraform apply
 ```
+
+If your AWS account is on the free plan, keep the dev node group on `m7i-flex.large` or another free-plan-eligible instance type. Using `t3.large` will fail node-group creation on accounts that restrict launch types to free-plan-eligible instances.
 
 Useful outputs:
 
