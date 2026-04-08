@@ -11,11 +11,10 @@ spec:
       targetPort: 5432
 ---
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: sentinelstream-dev-postgres
 spec:
-  serviceName: sentinelstream-dev-postgres
   replicas: 1
   selector:
     matchLabels:
@@ -61,12 +60,6 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
-  volumeClaimTemplates:
-    - metadata:
-        name: data
-      spec:
-        accessModes:
-          - ReadWriteOnce
-        resources:
-          requests:
-            storage: 10Gi
+      volumes:
+        - name: data
+          emptyDir: {}

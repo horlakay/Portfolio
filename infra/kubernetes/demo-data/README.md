@@ -5,7 +5,7 @@ shown live without provisioning managed PostgreSQL, Redis, or Kafka first.
 
 Deliberate simplifications:
 
-- PostgreSQL is single-instance and stores data on one persistent volume.
+- PostgreSQL is single-instance and uses ephemeral storage.
 - Redis runs as a single non-persistent pod.
 - Redpanda runs as a single development broker without persistent storage.
 
@@ -21,6 +21,9 @@ kubectl -n sentinelstream-data create secret generic sentinelstream-demo-data \
   --from-literal=POSTGRES_PASSWORD='<choose-a-password>' \
   --dry-run=client -o yaml | kubectl apply -f -
 kubectl apply -k infra/kubernetes/demo-data
+kubectl -n sentinelstream-data rollout status deployment/sentinelstream-dev-postgres --timeout=10m
+kubectl -n sentinelstream-data rollout status deployment/sentinelstream-redis --timeout=5m
+kubectl -n sentinelstream-data rollout status deployment/sentinelstream-dev-redpanda --timeout=10m
 ```
 
 ## Service Endpoints

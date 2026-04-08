@@ -41,16 +41,18 @@ spec:
             - internal://0.0.0.0:9092
             - --advertise-kafka-addr
             - internal://sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:9092
-            - --schema-registry-addr
-            - internal://0.0.0.0:8081
             - --rpc-addr
-            - sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:33145
+            - 0.0.0.0:33145
             - --advertise-rpc-addr
             - sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:33145
             - --mode
             - dev-container
             - --smp
             - "1"
+            - --memory
+            - 1G
+            - --reserve-memory
+            - 0M
             - --default-log-level=info
           ports:
             - containerPort: 9092
@@ -71,8 +73,8 @@ spec:
             periodSeconds: 15
           resources:
             requests:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 250m
+              memory: 768Mi
             limits:
               cpu: 1000m
-              memory: 2Gi
+              memory: 1.5Gi
