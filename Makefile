@@ -62,7 +62,7 @@ demo-data:
 	docker compose run --rm ingestion-service python scripts/demo_scenarios.py
 
 train-models:
-	$(PYTHON) training/pipelines/bootstrap_models.py
+	$(PYTHON) -m training.pipelines.bootstrap_models
 
 seed:
 	docker compose run --rm ingestion-service python scripts/seed_synthetic_data.py
