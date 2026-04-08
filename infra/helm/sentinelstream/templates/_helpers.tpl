@@ -54,3 +54,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $repository := default .name .service.repository -}}
 {{- printf "%s/%s:%s" .root.Values.global.imageRegistry $repository .root.Values.global.imageTag -}}
 {{- end -}}
+
+{{- define "sentinelstream.renderStringMap" -}}
+{{- range $key, $value := . }}
+{{ $key }}: {{ printf "%v" $value | quote }}
+{{- end -}}
+{{- end -}}

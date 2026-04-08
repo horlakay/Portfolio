@@ -26,10 +26,10 @@ spec:
         {{- include "sentinelstream.selectorLabels" $root | nindent 8 }}
         app.kubernetes.io/component: {{ $name }}
       annotations:
-        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum }}
-        checksum/secret: {{ default (include (print $root.Template.BasePath "/secret.yaml") $root | sha256sum) $root.Values.secrets.rolloutChecksum }}
+        checksum/config: {{ include (print $root.Template.BasePath "/configmap.yaml") $root | sha256sum | quote }}
+        checksum/secret: {{ default (include (print $root.Template.BasePath "/secret.yaml") $root | sha256sum) $root.Values.secrets.rolloutChecksum | quote }}
         {{- with $podAnnotations }}
-        {{- toYaml . | nindent 8 }}
+        {{- include "sentinelstream.renderStringMap" . | nindent 8 }}
         {{- end }}
     spec:
       serviceAccountName: {{ include "sentinelstream.serviceAccountName" (dict "root" $root "name" $name "service" $svc) }}

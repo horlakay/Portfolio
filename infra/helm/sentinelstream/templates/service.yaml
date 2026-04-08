@@ -11,8 +11,11 @@ metadata:
     {{- include "sentinelstream.labels" $root | nindent 4 }}
     {{- include "sentinelstream.selectorLabels" $root | nindent 4 }}
     app.kubernetes.io/component: {{ $name }}
+  {{- $annotations := default $root.Values.serviceDefaults.annotations $serviceConfig.annotations }}
+  {{- with $annotations }}
   annotations:
-    {{- toYaml (default $root.Values.serviceDefaults.annotations $serviceConfig.annotations) | nindent 4 }}
+    {{- include "sentinelstream.renderStringMap" . | nindent 4 }}
+  {{- end }}
 spec:
   type: {{ default $root.Values.serviceDefaults.type $serviceConfig.type }}
   {{- with (default $root.Values.serviceDefaults.loadBalancerSourceRanges $serviceConfig.loadBalancerSourceRanges) }}
