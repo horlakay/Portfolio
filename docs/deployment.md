@@ -117,6 +117,39 @@ Current default:
 - dev and prod values expose `analyst-console` with an internal AWS NLB-backed `LoadBalancer`
 - Ingress support remains available but disabled by default to avoid requiring an ingress controller for the first EKS deployment
 
+## Demo Data Services On EKS
+
+For a fast recruiter demo on EKS, SentinelStream also includes a demo-grade data
+overlay in `infra/kubernetes/demo-data`.
+
+This path provisions:
+
+- single-instance PostgreSQL
+- single-pod Redis
+- single-broker Redpanda in development mode
+
+Apply it with:
+
+```bash
+kubectl create namespace sentinelstream-data --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n sentinelstream-data create secret generic sentinelstream-demo-data \
+  --from-literal=POSTGRES_PASSWORD=<choose-a-password> \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -k infra/kubernetes/demo-data
+```
+
+Use these GitHub Environment values for the `dev` deployment after the overlay is running:
+
+- `POSTGRES_HOST=sentinelstream-dev-postgres.sentinelstream-data.svc.cluster.local`
+- `POSTGRES_PORT=5432`
+- `POSTGRES_DB=sentinelstream`
+- `POSTGRES_USER=sentinel`
+- `KAFKA_BOOTSTRAP_SERVERS=sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:9092`
+
+Use this secret for `dev`:
+
+- `REDIS_URL=redis://sentinelstream-redis.sentinelstream-data.svc.cluster.local:6379/0`
+
 ## Secret and Config Strategy
 
 SentinelStream splits configuration into three buckets.

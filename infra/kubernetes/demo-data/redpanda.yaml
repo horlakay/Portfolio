@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinelstream-dev-redpanda
+spec:
+  selector:
+    app: sentinelstream-dev-redpanda
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092
+    - name: admin
+      port: 9644
+      targetPort: 9644
+    - name: schema
+      port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentinelstream-dev-redpanda
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentinelstream-dev-redpanda
+  template:
+    metadata:
+      labels:
+        app: sentinelstream-dev-redpanda
+    spec:
+      containers:
+        - name: redpanda
+          image: docker.redpanda.com/redpandadata/redpanda:v25.3.11
+          imagePullPolicy: IfNotPresent
+          command:
+            - redpanda
+            - start
+            - --kafka-addr
+            - internal://0.0.0.0:9092
+            - --advertise-kafka-addr
+            - internal://sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:9092
+            - --schema-registry-addr
+            - internal://0.0.0.0:8081
+            - --rpc-addr
+            - sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:33145
+            - --advertise-rpc-addr
+            - sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:33145
+            - --mode
+            - dev-container
+            - --smp
+            - "1"
+            - --default-log-level=info
+          ports:
+            - containerPort: 9092
+              name: kafka
+            - containerPort: 9644
+              name: admin
+            - containerPort: 8081
+              name: schema
+          readinessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 1000m
+              memory: 2Gi

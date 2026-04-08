@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentinelstream-dev-postgres
+spec:
+  selector:
+    app: sentinelstream-dev-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sentinelstream-dev-postgres
+spec:
+  serviceName: sentinelstream-dev-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentinelstream-dev-postgres
+  template:
+    metadata:
+      labels:
+        app: sentinelstream-dev-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: sentinelstream
+            - name: POSTGRES_USER
+              value: sentinel
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sentinelstream-demo-data
+                  key: POSTGRES_PASSWORD
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
