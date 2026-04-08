@@ -59,7 +59,7 @@ async def _api_post(path: str, token: str, base_url: str, payload: dict) -> dict
         return response.json()
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, response_model=None)
 async def home(request: Request) -> HTMLResponse | RedirectResponse:
     claims = await _claims_or_none(request)
     if claims is None:
@@ -85,7 +85,7 @@ async def login_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse("login.html", {"request": request, "error": None})
 
 
-@app.post("/login", response_class=HTMLResponse)
+@app.post("/login", response_class=HTMLResponse, response_model=None)
 async def login(
     request: Request,
     username: str = Form(...),
@@ -112,7 +112,7 @@ async def logout() -> RedirectResponse:
     return response
 
 
-@app.get("/decisions/{decision_id}", response_class=HTMLResponse)
+@app.get("/decisions/{decision_id}", response_class=HTMLResponse, response_model=None)
 async def decision_detail(request: Request, decision_id: str) -> HTMLResponse | RedirectResponse:
     claims = await _claims_or_none(request)
     if claims is None:
