@@ -233,6 +233,18 @@ jobs:
             kubectl logs -n "${KUBE_NAMESPACE}" "${pod#pod/}" --all-containers --tail=200 || true
             echo "::endgroup::"
           done
+          echo "### Demo data namespace snapshot"
+          kubectl get all -n sentinelstream-data -o wide || true
+          echo "### Demo data recent events"
+          kubectl get events -n sentinelstream-data --sort-by=.metadata.creationTimestamp || true
+          for workload in deployment/sentinelstream-dev-postgres deployment/sentinelstream-dev-redpanda deployment/sentinelstream-redis; do
+            echo "::group::describe ${workload}"
+            kubectl describe -n sentinelstream-data "${workload}" || true
+            echo "::endgroup::"
+            echo "::group::logs ${workload}"
+            kubectl logs -n sentinelstream-data "${workload}" --all-containers --tail=200 || true
+            echo "::endgroup::"
+          done
       - name: Skip deploy when environment config is absent
         if: steps.preflight.outputs.ready != 'true'
         run: echo "Skipping dev deploy because required environment variables or secrets are not configured yet."
