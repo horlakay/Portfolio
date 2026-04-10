@@ -51,6 +51,7 @@ def validate_helm() -> list[str]:
         "Chart.yaml",
         "values.yaml",
         "values-dev.yaml",
+        "values-local.yaml",
         "values-prod.yaml",
     }
     required_templates = {
@@ -83,7 +84,7 @@ def validate_helm() -> list[str]:
     except Exception as exc:  # noqa: BLE001
         errors.append(f"invalid Chart.yaml: {exc}")
 
-    for values_name in ("values.yaml", "values-dev.yaml", "values-prod.yaml"):
+    for values_name in ("values.yaml", "values-dev.yaml", "values-local.yaml", "values-prod.yaml"):
         path = chart_root / values_name
         try:
             values = _load_yaml(path)

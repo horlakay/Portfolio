@@ -6,6 +6,9 @@ global:
   imageRegistry: public.ecr.aws/example/sentinelstream
   imageTag: latest
   imagePullPolicy: IfNotPresent
+  dependencyWait:
+    image: busybox:1.36.1
+    imagePullPolicy: IfNotPresent
   imagePullSecrets: []
   logLevel: INFO
   otelEndpoint: http://otel-collector.observability:4317
@@ -66,6 +69,7 @@ serviceDefaults:
   annotations: {}
   loadBalancerSourceRanges: []
   terminationGracePeriodSeconds: 30
+  dependencyWaits: []
   resources:
     requests:
       cpu: 100m
@@ -86,6 +90,13 @@ serviceDefaults:
       periodSeconds: 5
       timeoutSeconds: 3
       failureThreshold: 3
+    startup:
+      enabled: false
+      path: /health/live
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 24
   hpa:
     enabled: false
     minReplicas: 2

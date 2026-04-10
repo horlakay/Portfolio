@@ -12,9 +12,6 @@ spec:
     - name: admin
       port: 9644
       targetPort: 9644
-    - name: schema
-      port: 8081
-      targetPort: 8081
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -32,49 +29,52 @@ spec:
     spec:
       containers:
         - name: redpanda
-          image: docker.redpanda.com/redpandadata/redpanda:v25.3.11
+          image: docker.redpanda.com/redpandadata/redpanda:v24.1.10
           imagePullPolicy: IfNotPresent
           command:
             - redpanda
             - start
-            - --kafka-addr
-            - internal://0.0.0.0:9092
-            - --advertise-kafka-addr
-            - internal://sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:9092
-            - --rpc-addr
-            - 0.0.0.0:33145
-            - --advertise-rpc-addr
-            - sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:33145
-            - --mode
-            - dev-container
             - --smp
             - "1"
             - --memory
             - 1G
             - --reserve-memory
             - 0M
-            - --default-log-level=info
+            - --overprovisioned
+            - --node-id
+            - "0"
+            - --check=false
+            - --kafka-addr
+            - PLAINTEXT://0.0.0.0:9092
+            - --advertise-kafka-addr
+            - PLAINTEXT://sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:9092
+            - --set
+            - redpanda.auto_create_topics_enabled=true
           ports:
             - containerPort: 9092
               name: kafka
             - containerPort: 9644
               name: admin
-            - containerPort: 8081
-              name: schema
+          startupProbe:
+            tcpSocket:
+              port: 9092
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 30
           readinessProbe:
             tcpSocket:
               port: 9092
-            initialDelaySeconds: 15
-            periodSeconds: 10
+            initialDelaySeconds: 10
+            periodSeconds: 5
           livenessProbe:
             tcpSocket:
               port: 9092
             initialDelaySeconds: 30
-            periodSeconds: 15
+            periodSeconds: 10
           resources:
             requests:
               cpu: 250m
-              memory: 768Mi
+              memory: 512Mi
             limits:
               cpu: 1000m
-              memory: 1.5Gi
+              memory: 1Gi

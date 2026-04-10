@@ -1,0 +1,115 @@
+global:
+  environment: local-k8s
+  imageRegistry: sentinelstream
+  imageTag: local
+  imagePullPolicy: IfNotPresent
+  otelEndpoint: ""
+
+config:
+  postgres:
+    host: sentinelstream-dev-postgres.sentinelstream-data.svc.cluster.local
+    port: 5432
+    database: sentinelstream
+    user: sentinel
+  kafkaBootstrapServers: sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:9092
+
+secrets:
+  create: true
+  name: sentinelstream-secrets
+  stringData:
+    JWT_SECRET: local-demo-jwt-secret
+    ANALYST_CONSOLE_PASSWORD: demo-password
+    POSTGRES_PASSWORD: sentinel
+    REDIS_URL: redis://sentinelstream-redis.sentinelstream-data.svc.cluster.local:6379/0
+
+serviceDefaults:
+  dependencyWaits: []
+  probes:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      enabled: true
+      path: /health/live
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 30
+
+services:
+  ingestion-service:
+    replicas: 1
+    dependencyWaits:
+      - name: postgres
+        host: sentinelstream-dev-postgres.sentinelstream-data.svc.cluster.local
+        port: 5432
+      - name: redpanda
+        host: sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local
+        port: 9092
+  feature-service:
+    replicas: 1
+    dependencyWaits:
+      - name: postgres
+        host: sentinelstream-dev-postgres.sentinelstream-data.svc.cluster.local
+        port: 5432
+      - name: redis
+        host: sentinelstream-redis.sentinelstream-data.svc.cluster.local
+        port: 6379
+      - name: redpanda
+        host: sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local
+        port: 9092
+  rule-engine:
+    replicas: 1
+  model-service:
+    replicas: 1
+  decision-service:
+    replicas: 1
+    hpa:
+      enabled: false
+    pdb:
+      enabled: false
+    dependencyWaits:
+      - name: feature-service
+        host: sentinelstream-feature-service
+        port: 8002
+      - name: rule-engine
+        host: sentinelstream-rule-engine
+        port: 8003
+      - name: model-service
+        host: sentinelstream-model-service
+        port: 8004
+      - name: postgres
+        host: sentinelstream-dev-postgres.sentinelstream-data.svc.cluster.local
+        port: 5432
+      - name: redpanda
+        host: sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local
+        port: 9092
+  feedback-service:
+    replicas: 1
+    dependencyWaits:
+      - name: postgres
+        host: sentinelstream-dev-postgres.sentinelstream-data.svc.cluster.local
+        port: 5432
+      - name: redpanda
+        host: sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local
+        port: 9092
+  analyst-console:
+    replicas: 1
+    service:
+      type: ClusterIP
+    dependencyWaits:
+      - name: decision-service
+        host: sentinelstream-decision-service
+        port: 8005
+      - name: feedback-service
+        host: sentinelstream-feedback-service
+        port: 8006

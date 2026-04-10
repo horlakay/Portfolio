@@ -1,7 +1,8 @@
 FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app/shared/src:/app/services/model-service/src
 
 WORKDIR /app
 

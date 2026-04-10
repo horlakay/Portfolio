@@ -1,7 +1,7 @@
 # Demo Data Services
 
-This overlay deploys a demo-grade data stack into EKS so SentinelStream can be
-shown live without provisioning managed PostgreSQL, Redis, or Kafka first.
+This overlay deploys a demo-grade data stack for SentinelStream into any
+Kubernetes cluster, including kind, Docker Desktop Kubernetes, and EKS.
 
 Deliberate simplifications:
 
@@ -24,6 +24,12 @@ kubectl apply -k infra/kubernetes/demo-data
 kubectl -n sentinelstream-data rollout status deployment/sentinelstream-dev-postgres --timeout=10m
 kubectl -n sentinelstream-data rollout status deployment/sentinelstream-redis --timeout=5m
 kubectl -n sentinelstream-data rollout status deployment/sentinelstream-dev-redpanda --timeout=10m
+```
+
+For the fastest local workflow, run:
+
+```bash
+make k8s-local-demo-data
 ```
 
 ## Service Endpoints

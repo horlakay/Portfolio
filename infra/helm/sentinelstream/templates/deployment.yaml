@@ -5,6 +5,7 @@
 {{- $resources := default $root.Values.serviceDefaults.resources $svc.resources }}
 {{- $probes := default $root.Values.serviceDefaults.probes $svc.probes }}
 {{- $podAnnotations := default $root.Values.global.podAnnotations $svc.podAnnotations }}
+{{- $dependencyWaits := default $root.Values.serviceDefaults.dependencyWaits $svc.dependencyWaits }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,6 +43,30 @@ spec:
       securityContext:
         {{- toYaml $root.Values.global.podSecurityContext | nindent 8 }}
       terminationGracePeriodSeconds: {{ default $root.Values.serviceDefaults.terminationGracePeriodSeconds $svc.terminationGracePeriodSeconds }}
+      {{- if $dependencyWaits }}
+      initContainers:
+        {{- range $wait := $dependencyWaits }}
+        - name: wait-for-{{ $wait.name }}
+          image: {{ $root.Values.global.dependencyWait.image }}
+          imagePullPolicy: {{ default $root.Values.global.imagePullPolicy $root.Values.global.dependencyWait.imagePullPolicy }}
+          command:
+            - sh
+            - -ec
+            - |
+              attempts=0
+              until nc -z -w 2 {{ $wait.host | quote }} {{ $wait.port | quote }}; do
+                attempts=$((attempts + 1))
+                if [ "$attempts" -ge 120 ]; then
+                  echo "Timed out waiting for {{ $wait.name }} at {{ $wait.host }}:{{ $wait.port }}"
+                  exit 1
+                fi
+                echo "Waiting for {{ $wait.name }} at {{ $wait.host }}:{{ $wait.port }}"
+                sleep 2
+              done
+          securityContext:
+            {{- toYaml $root.Values.global.containerSecurityContext | nindent 12 }}
+        {{- end }}
+      {{- end }}
       containers:
         - name: {{ $name }}
           image: {{ include "sentinelstream.serviceImage" (dict "root" $root "name" $name "service" $svc) }}
@@ -73,6 +98,18 @@ spec:
             {{- with $svc.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
+          {{- with $probes.startup }}
+          {{- if .enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .path }}
+              port: http
+            initialDelaySeconds: {{ .initialDelaySeconds }}
+            periodSeconds: {{ .periodSeconds }}
+            timeoutSeconds: {{ .timeoutSeconds }}
+            failureThreshold: {{ .failureThreshold }}
+          {{- end }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: {{ $probes.liveness.path }}

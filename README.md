@@ -46,7 +46,7 @@ flowchart LR
 | `feedback-service` | Analyst labels, audit trail, retraining feedback topic | `8006` |
 | `analyst-console` | Secure internal triage UI for decisions, rule hits, features, and labels | `8007` |
 
-## Local Quickstart
+## Docker Compose Quickstart
 
 Prerequisites:
 
@@ -84,6 +84,88 @@ Open:
 Default local analyst password: `demo-password`
 
 Default Grafana credentials: `admin` / `admin`
+
+## Local Kubernetes Demo
+
+When AWS is unavailable, the fastest screenshot-friendly fallback is the local
+Kubernetes path. It reuses the existing Helm chart plus the
+`infra/kubernetes/demo-data` manifests and exposes the analyst console through
+`kubectl port-forward`.
+
+Prerequisites:
+
+- Docker Desktop Kubernetes or [kind](https://kind.sigs.k8s.io/)
+- `kubectl`
+- `helm`
+- Docker
+- Python `3.12`
+
+Create a local cluster with kind:
+
+```bash
+kind create cluster --name sentinelstream-local
+```
+
+Build the local images and preload demo model artifacts:
+
+```bash
+python -m pip install .[dev]
+make k8s-local-build-images
+make k8s-kind-load-images
+```
+
+Deploy the demo dependency stack:
+
+```bash
+make k8s-local-demo-data
+```
+
+Deploy the application with the new local Helm values:
+
+```bash
+make helm-template-local
+make k8s-local-deploy
+make k8s-local-status
+```
+
+Seed demo traffic once the pods are healthy:
+
+```bash
+make k8s-local-demo
+```
+
+Expose the analyst console and open it in a browser:
+
+```bash
+make k8s-local-port-forward
+```
+
+Open [http://127.0.0.1:8007](http://127.0.0.1:8007).
+
+Default local demo credentials:
+
+- Analyst console password: `demo-password`
+- Namespace: `sentinelstream`
+- Release: `sentinelstream`
+
+If you are using Docker Desktop Kubernetes instead of kind, skip
+`make k8s-kind-load-images`. The rest of the flow stays the same.
+
+Helpful checks while bringing the demo up:
+
+```bash
+kubectl get pods -n sentinelstream-data
+kubectl get pods -n sentinelstream
+kubectl logs deployment/sentinelstream-dev-redpanda -n sentinelstream-data --tail=120
+kubectl logs deployment/sentinelstream-analyst-console -n sentinelstream --tail=120
+```
+
+Known local-demo limitations:
+
+- PostgreSQL, Redis, and Redpanda are single-node and ephemeral on purpose.
+- Autoscaling is disabled in local mode.
+- The analyst console is exposed with port-forward instead of a LoadBalancer.
+- AWS, EKS, and ECR deployment remain supported, but they are not required for the local demo flow.
 
 ## Recruiter Demo Sequence
 
@@ -257,6 +339,10 @@ make benchmark-model
 make validate-delivery
 make helm-lint
 make helm-template-dev
+make helm-template-local
+make k8s-local-up
+make k8s-local-demo
+make k8s-local-port-forward
 make terraform-dev-plan
 make chaos-model-timeout
 make chaos-cache-disable
