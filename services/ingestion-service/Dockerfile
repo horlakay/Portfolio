@@ -15,4 +15,6 @@ COPY scripts /app/scripts
 
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .
 
+COPY data /app/data
+
 CMD ["uvicorn", "ingestion_service.main:app", "--host", "0.0.0.0", "--port", "8001"]

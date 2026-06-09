@@ -85,6 +85,60 @@ Default local analyst password: `demo-password`
 
 Default Grafana credentials: `admin` / `admin`
 
+## Desktop App
+
+The repo now includes an initial desktop wrapper at
+[apps/analyst-desktop/README.md](C:/Users/OMEN/Desktop/kayode/SentinelStream/apps/analyst-desktop/README.md).
+It turns the existing `analyst-console` into a native Windows desktop shell so
+we can evolve SentinelStream toward a Microsoft Store-ready analyst workstation.
+
+What the desktop shell supports today:
+
+- a native Electron window for the analyst console
+- `external` mode for a running SentinelStream backend
+- `embedded` development mode that launches the FastAPI analyst console process
+- persistent desktop settings with an in-app settings screen
+- a branded loading screen plus an offline recovery screen
+- Windows packaging scripts for installer and portable builds
+
+Fastest way to try it with the current stack:
+
+```powershell
+docker compose up -d postgres redis redpanda otel-collector rule-engine model-service feature-service decision-service feedback-service analyst-console
+cd apps/analyst-desktop
+npm install
+npm run dev
+```
+
+For a pure development shell that starts the analyst console process itself:
+
+```powershell
+python -m pip install .[dev]
+$env:SENTINEL_DESKTOP_BACKEND_MODE = "embedded"
+$env:SENTINEL_DESKTOP_PYTHON = "$PWD\\.venv314\\Scripts\\python.exe"
+cd apps/analyst-desktop
+npm run dev
+```
+
+Packaging commands:
+
+```powershell
+cd apps/analyst-desktop
+npm install
+npm run pack
+npm run dist
+```
+
+This is the first desktop productization step. The next phase for Store release
+would be production icon assets, privacy-policy/support metadata, and a final
+Windows Store packaging workflow.
+
+Store-release planning docs:
+
+- [docs/desktop-store-release.md](C:\Users\OMEN\Desktop\kayode\SentinelStream\docs\desktop-store-release.md)
+- [docs/legal/privacy-policy.md](C:\Users\OMEN\Desktop\kayode\SentinelStream\docs\legal\privacy-policy.md)
+- [docs/legal/support.md](C:\Users\OMEN\Desktop\kayode\SentinelStream\docs\legal\support.md)
+
 ## Local Kubernetes Demo
 
 When AWS is unavailable, the fastest screenshot-friendly fallback is the local
@@ -144,12 +198,46 @@ Open [http://127.0.0.1:8007](http://127.0.0.1:8007).
 
 Default local demo credentials:
 
+- Analyst console username: `demo-analyst`
+- Analyst console role: `analyst`
 - Analyst console password: `demo-password`
 - Namespace: `sentinelstream`
 - Release: `sentinelstream`
 
+Keep the port-forward terminal open while you browse the console.
+
 If you are using Docker Desktop Kubernetes instead of kind, skip
 `make k8s-kind-load-images`. The rest of the flow stays the same.
+
+If GNU `make` is not installed, you can run the same flow directly from
+PowerShell:
+
+```powershell
+kubectl create namespace sentinelstream-data --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n sentinelstream-data create secret generic sentinelstream-demo-data --from-literal=POSTGRES_PASSWORD='sentinel' --dry-run=client -o yaml | kubectl apply -f -
+kubectl -n sentinelstream-data apply -f infra/kubernetes/demo-data/postgres.yaml
+kubectl -n sentinelstream-data apply -f infra/kubernetes/demo-data/redis.yaml
+kubectl -n sentinelstream-data apply -f infra/kubernetes/demo-data/redpanda.yaml
+kubectl -n sentinelstream-data rollout status deployment/sentinelstream-dev-postgres --timeout=10m
+kubectl -n sentinelstream-data rollout status deployment/sentinelstream-redis --timeout=5m
+kubectl -n sentinelstream-data rollout status deployment/sentinelstream-dev-redpanda --timeout=10m
+
+helm upgrade --install sentinelstream infra/helm/sentinelstream `
+  --namespace sentinelstream `
+  --create-namespace `
+  --values infra/helm/sentinelstream/values-local.yaml `
+  --set-string global.imageRegistry=sentinelstream `
+  --set-string global.imageTag=local `
+  --set-string secrets.stringData.JWT_SECRET=local-demo-jwt-secret-2026-please-change `
+  --set-string secrets.stringData.ANALYST_CONSOLE_PASSWORD=demo-password `
+  --set-string secrets.stringData.POSTGRES_PASSWORD=sentinel `
+  --debug `
+  --wait `
+  --timeout 15m
+
+kubectl -n sentinelstream exec deployment/sentinelstream-ingestion-service -- python /app/scripts/demo_scenarios.py
+kubectl -n sentinelstream port-forward svc/sentinelstream-analyst-console 8007:8007
+```
 
 Helpful checks while bringing the demo up:
 
@@ -325,6 +413,9 @@ Release verification path:
 - `docs/api-spec.md`
 - `docs/deployment.md`
 - `docs/github-setup.md`
+- `docs/desktop-store-release.md`
+- `docs/legal/privacy-policy.md`
+- `docs/legal/support.md`
 - `docs/adr/`
 
 ## Exact Commands

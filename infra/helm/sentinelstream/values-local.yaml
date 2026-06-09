@@ -12,12 +12,15 @@ config:
     database: sentinelstream
     user: sentinel
   kafkaBootstrapServers: sentinelstream-dev-redpanda.sentinelstream-data.svc.cluster.local:9092
+  modelTimeoutMs: 1000
+  featureTimeoutMs: 1500
+  ruleTimeoutMs: 500
 
 secrets:
   create: true
   name: sentinelstream-secrets
   stringData:
-    JWT_SECRET: local-demo-jwt-secret
+    JWT_SECRET: local-demo-jwt-secret-2026-please-change
     ANALYST_CONSOLE_PASSWORD: demo-password
     POSTGRES_PASSWORD: sentinel
     REDIS_URL: redis://sentinelstream-redis.sentinelstream-data.svc.cluster.local:6379/0

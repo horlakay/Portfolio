@@ -1,0 +1,63 @@
+{
+  "name": "sentinelstream-analyst-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop shell for the SentinelStream analyst console.",
+  "main": "main.js",
+  "author": "SentinelStream",
+  "license": "UNLICENSED",
+  "scripts": {
+    "clean": "node scripts/clean-release.js",
+    "dev": "electron .",
+    "smoke": "node --check main.js && node --check preload.js",
+    "pack": "npm run clean && electron-builder --dir",
+    "dist": "npm run clean && electron-builder --win nsis portable",
+    "dist:nsis": "npm run clean && electron-builder --win nsis",
+    "dist:portable": "npm run clean && electron-builder --win portable",
+    "dist:appx": "npm run clean && electron-builder --win appx"
+  },
+  "devDependencies": {
+    "electron": "^37.1.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.sentinelstream.analystdesktop",
+    "productName": "SentinelStream Analyst Desktop",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "verifyUpdateCodeSignature": false,
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
+    },
+    "appx": {
+      "applicationId": "SentinelStreamAnalystDesktop",
+      "identityName": "REPLACE_WITH_PARTNER_CENTER_IDENTITY_NAME",
+      "publisher": "CN=REPLACE_WITH_PARTNER_CENTER_PUBLISHER_ID",
+      "publisherDisplayName": "REPLACE_WITH_PUBLISHER_DISPLAY_NAME",
+      "backgroundColor": "#09111f",
+      "languages": [
+        "en-US"
+      ],
+      "artifactName": "${productName}-Store-${version}-${arch}.${ext}"
+    }
+  }
+}

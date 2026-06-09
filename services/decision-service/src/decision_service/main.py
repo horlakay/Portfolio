@@ -378,20 +378,29 @@ async def consume_forever(app) -> None:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     state = AppState(get_common_settings())
     app.state.container = state
-    async with state.engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    await state.producer.start()
-    state.consumer_task = asyncio.create_task(consume_forever(app))
-    yield
-    if state.consumer_task:
-        state.consumer_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await state.consumer_task
-    await state.feature_client.close()
-    await state.rule_client.close()
-    await state.model_client.close()
-    await state.producer.stop()
-    await state.engine.dispose()
+    try:
+        async with state.engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        await state.producer.start()
+        state.consumer_task = asyncio.create_task(consume_forever(app))
+        yield
+    finally:
+        if state.consumer_task:
+            state.consumer_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await state.consumer_task
+        with contextlib.suppress(Exception):
+            await state.feature_client.close()
+        with contextlib.suppress(Exception):
+            await state.rule_client.close()
+        with contextlib.suppress(Exception):
+            await state.model_client.close()
+        with contextlib.suppress(Exception):
+            await state.producer.stop()
+        with contextlib.suppress(Exception):
+            await state.consumer.stop()
+        with contextlib.suppress(Exception):
+            await state.engine.dispose()
 
 
 app = build_app(get_common_settings())

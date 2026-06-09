@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SentinelStream Milestone Archive</title>
+    <meta
+      name="description"
+      content="A Medium-style public archive of the SentinelStream milestone: building a cloud-native fraud detection platform and pivoting it into a desktop-ready product path."
+    />
+    <link rel="stylesheet" href="../assets/article.css" />
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="topbar">
+        <div class="topbar-inner">
+          <a class="brand" href="../index.html">
+            <img src="../assets/sentinelstream-mark.svg" alt="SentinelStream mark" />
+            <span>SentinelStream Archive</span>
+          </a>
+          <nav class="nav">
+            <a href="#article">Read</a>
+            <a href="#takeaways">Takeaways</a>
+            <a href="../desktop-store-release.html">Store Plan</a>
+            <a href="../legal/privacy-policy.html">Privacy</a>
+          </nav>
+        </div>
+      </header>
+
+      <main class="page">
+        <section class="hero">
+          <div>
+            <div class="eyebrow"><span class="dot"></span> Milestone Archive</div>
+            <h1>I Built a Cloud-Native Fraud Detection Platform, Then Rebuilt the Path to the Product When the Cloud Failed Me</h1>
+            <p class="subtitle">
+              SentinelStream started as a serious systems-design challenge and
+              became something more: a working analyst platform, a local
+              fallback deployment path, and a Windows desktop artifact that
+              proved the project could survive beyond ideal cloud assumptions.
+            </p>
+            <div class="meta">
+              <span class="chip">Fraud Detection</span>
+              <span class="chip">Cybersecurity</span>
+              <span class="chip">Microservices</span>
+              <span class="chip">Kubernetes</span>
+              <span class="chip">Desktop Productization</span>
+            </div>
+            <div class="cta-row">
+              <a class="button primary" href="#article">Read the article</a>
+              <a class="button secondary" href="./sentinelstream-milestone.md">Open markdown source</a>
+            </div>
+          </div>
+
+          <aside class="hero-card">
+            <h2>Why this page exists</h2>
+            <p>
+              This is a public, Medium-inspired archive for one of the most
+              important engineering milestones in the SentinelStream journey. It
+              captures not just what was built, but what had to be solved to
+              make the system resilient, demonstrable, and product-shaped.
+            </p>
+            <div class="stack-list">
+              <span class="pill">FastAPI</span>
+              <span class="pill">Python</span>
+              <span class="pill">Kafka / Redpanda</span>
+              <span class="pill">Postgres</span>
+              <span class="pill">Redis</span>
+              <span class="pill">Terraform</span>
+              <span class="pill">Helm</span>
+              <span class="pill">Electron</span>
+            </div>
+          </aside>
+        </section>
+
+        <section class="content-grid">
+          <article class="article" id="article">
+            <p>
+              Some projects start because you want to learn a new framework.
+              SentinelStream started because I wanted to build something that
+              forced me to think like a systems engineer, a platform builder,
+              and a product owner at the same time.
+            </p>
+
+            <p>
+              Fraud detection is one of those domains that refuses to stay
+              simple. It is part security problem, part data problem, part
+              systems problem, and part human-decision problem. You are not just
+              classifying events. You are ingesting activity, enriching it,
+              running rules, layering machine learning, producing a decision,
+              making it explainable, and then handing it to a person who still
+              needs to trust what the system is doing.
+            </p>
+
+            <p>
+              That was the pull for me. I did not want to build a notebook demo
+              and pretend it was a platform. I wanted something more credible:
+              modular services, event-driven flow, observability, deployment
+              realism, and an analyst-facing product surface.
+            </p>
+
+            <div class="quote">
+              <p>
+                “I did not want to prove that I could write a single service. I
+                wanted to prove that I could build the path from ingestion to
+                analyst review.”
+              </p>
+            </div>
+
+            <h2>What SentinelStream Actually Is</h2>
+
+            <p>
+              At a plain-English level, SentinelStream is a cloud-native fraud
+              detection and analyst decision-support platform. It takes incoming
+              transactional or event data, enriches it, scores it, checks it
+              against explicit rules, makes a final decision, stores the result,
+              and then exposes that result to a human analyst through a review
+              console.
+            </p>
+
+            <p>
+              Under the hood, the system is split into Python microservices:
+              <code>ingestion-service</code>, <code>feature-service</code>,
+              <code>rule-engine</code>, <code>model-service</code>,
+              <code>decision-service</code>, <code>feedback-service</code>, and
+              <code>analyst-console</code>.
+            </p>
+
+            <p>
+              The flow is intentionally modular. The ingestion layer receives
+              activity and publishes it into the pipeline. The feature layer
+              derives context. The rules layer brings deterministic fraud logic.
+              The model layer provides machine-learning inference. The decision
+              layer combines those pieces into an outcome. The feedback layer
+              captures analyst review. And the analyst console turns the whole
+              thing into something usable by a human, not just a service mesh.
+            </p>
+
+            <p>
+              Supporting that pipeline are Postgres for persistence, Redis for
+              caching, and Kafka-compatible messaging through Redpanda. Just as
+              importantly, observability was treated as part of the architecture
+              instead of an afterthought: structured logs, traces, metrics, and
+              OpenTelemetry were all included because I wanted a system that
+              could actually be understood when it failed.
+            </p>
+
+            <h2>Why the Architecture Matters</h2>
+
+            <p>
+              I chose microservices because the components in a fraud system do
+              not evolve at the same pace. Rules change differently from model
+              logic. Analyst workflows change differently from ingestion logic.
+              Keeping those concerns separated makes experimentation, debugging,
+              and future scaling much more practical.
+            </p>
+
+            <p>
+              I chose an event-driven pattern because fraud and risk workflows
+              are rarely just clean request-response interactions. They are
+              streams, state transitions, dependencies, and downstream actions.
+              Messaging made it easier to reflect that reality instead of
+              flattening the system into synchronous calls only.
+            </p>
+
+            <p>
+              I also made a deliberate architecture decision not to choose
+              between rules and machine learning. In real fraud operations,
+              explicit rules still matter. They are fast, understandable, and
+              often operationally important. Machine learning expands the system
+              with pattern recognition that rules alone will miss. The real
+              system value came from letting both exist in one pipeline.
+            </p>
+
+            <p>
+              And above all of that sits the analyst. That part mattered to me.
+              If the system produced decisions but gave no meaningful review path
+              to a human operator, it would still be incomplete.
+            </p>
+
+            <h2>The Hard Engineering Reality</h2>
+
+            <p>
+              SentinelStream did not move from architecture sketch to stable
+              deployment in a straight line. That is part of why this milestone
+              means so much to me: it required real debugging, not just clean
+              implementation.
+            </p>
+
+            <p>
+              The infrastructure path included Terraform, ECR, EKS, Helm,
+              GitHub Actions, and Kubernetes. That meant the challenge was not
+              just “does this code run?” but “does the whole environment behave
+              the way this system assumes?”
+            </p>
+
+            <p>
+              Some of the fixes were small on paper but important in practice:
+              Terraform ECR output fixes, ECR lifecycle policy corrections,
+              cheaper and more realistic dev node choices, model-bootstrap
+              workflow fixes, Helm annotation typing fixes, service exposure
+              changes for the analyst console, and far better deployment
+              diagnostics when things failed.
+            </p>
+
+            <p>
+              Then came the deeper work. Services were crash-looping. Dependency
+              timing became very real. I had to trace Postgres connectivity from
+              environment configuration into async SQLAlchemy and
+              <code>asyncpg</code> to prove the actual runtime hostname path. I
+              had to untangle Kafka warnings from the true startup failure. I
+              had to treat lifecycle cleanup as a real engineering concern,
+              because failing startup without graceful shutdown creates its own
+              confusion.
+            </p>
+
+            <div class="quote">
+              <p>
+                The ugly part of distributed systems is not that they fail. It
+                is that they often fail noisily enough to hide the first real
+                cause if you have not built the right diagnostics.
+              </p>
+            </div>
+
+            <h2>When the Cloud Path Broke</h2>
+
+            <p>
+              The biggest disruption in the project was not a syntax error. It
+              was infrastructure reality. The AWS path was serious: Terraform,
+              EKS design, Helm deployment, CI/CD, containerized services. But at
+              a critical point, the AWS account became suspended. That meant the
+              intended cloud deployment path stopped being the reliable route for
+              showing the platform.
+            </p>
+
+            <p>
+              That kind of event can make a project feel like it has hit a wall.
+              It can turn months of work into a deployment footnote.
+            </p>
+
+            <p>
+              Instead, it forced a much better engineering response: stop
+              treating the original infrastructure plan as the only valid finish
+              line.
+            </p>
+
+            <h2>The Pivot That Saved SentinelStream</h2>
+
+            <p>
+              The best product decision in this milestone was the pivot to a
+              local fallback deployment path.
+            </p>
+
+            <p>
+              Rather than abandon the cloud-native architecture, I adapted it
+              for local reproducibility. I reused the existing Helm chart and
+              Kubernetes structure, stabilized the demo-data stack around
+              Postgres, Redis, and Redpanda, and made local image build and load
+              flows much more practical.
+            </p>
+
+            <p>
+              That work changed the project in an important way. SentinelStream
+              stopped being a platform that only looked complete when the ideal
+              cloud environment was available. It became a platform that could
+              preserve the user outcome even when the original path was blocked.
+            </p>
+
+            <p>
+              That is a lesson I will not forget: resilient product thinking
+              does not end at service design. It includes delivery paths, demo
+              paths, and fallback paths too.
+            </p>
+
+            <h2>The Desktop App Milestone</h2>
+
+            <p>
+              Once the local platform path became stable enough, the next
+              question changed from “can this run?” to “can this feel like a
+              product?”
+            </p>
+
+            <p>
+              That is what pushed me to package the analyst console into a
+              Windows desktop shell using Electron.
+            </p>
+
+            <p>
+              This shifted SentinelStream from being only a backend platform into
+              something more product-shaped. The desktop work introduced a
+              Windows installer, a portable executable, embedded and external
+              launch modes, persisted settings, startup and fallback screens, and
+              the first serious Microsoft Store-readiness planning materials.
+            </p>
+
+            <p>
+              It also surfaced a new category of engineering reality. Packaging
+              is not the same thing as programming. Build artifacts can collide.
+              Packaged binaries do not always behave like local source runs.
+              Embedded-mode assumptions that work in development can fail after
+              packaging. Product polish lives in those details.
+            </p>
+
+            <p>
+              Solving those issues mattered because it moved the project one step
+              closer to something I could point to not just as an architecture,
+              but as a product artifact.
+            </p>
+
+            <h2>What I Learned</h2>
+
+            <p>
+              SentinelStream taught me that architecture is only impressive if
+              it survives contact with operations. A clean diagram is not enough.
+              A real system needs startup discipline, dependency realism,
+              observability, cleanup behavior, and fallback thinking.
+            </p>
+
+            <p>
+              It also reinforced how important observability is. Logs, traces,
+              health checks, and diagnostics are what turn failure into
+              learning. They are what separate “something is broken” from “I can
+              explain what is broken and why.”
+            </p>
+
+            <p>
+              The project also taught me the difference between code completion
+              and product completion. The services working together was an
+              important milestone. The analyst console becoming usable was
+              another. The desktop shell becoming launchable and packageable was
+              yet another. Those are not the same thing, and each one matters.
+            </p>
+
+            <h2 id="takeaways">Key Takeaways</h2>
+            <ul>
+              <li>Serious systems become real when architecture, operations, and usability meet.</li>
+              <li>Rules, machine learning, and analyst oversight are stronger together than in isolation.</li>
+              <li>Cloud-native systems benefit from local fallback paths, not just cloud-first plans.</li>
+              <li>Startup order, lifecycle cleanup, and diagnostics are core distributed-systems skills.</li>
+              <li>Productization begins when the system becomes usable, not just deployable.</li>
+            </ul>
+
+            <h2>Why This Milestone Matters to Me</h2>
+
+            <p>
+              There are projects you finish and move on from quickly. Then there
+              are projects that change the way you think. SentinelStream is one
+              of those for me.
+            </p>
+
+            <p>
+              It forced me to work across architecture, microservices,
+              event-driven design, infrastructure as code, Kubernetes,
+              deployment, CI/CD, debugging, observability, desktop packaging,
+              and release thinking. It pushed me past the point where “the code
+              works” was enough.
+            </p>
+
+            <p>
+              That is why I wanted to archive this milestone properly. Not just
+              because the platform exists, but because the journey taught me how
+              to keep building when the cleanest path failed. It taught me how
+              to preserve the user outcome, not just the original plan.
+            </p>
+
+            <p>
+              SentinelStream now exists not only as a set of services, but as a
+              platform with an architecture, a fallback story, a desktop
+              artifact, and a path toward something that feels increasingly like
+              a product.
+            </p>
+          </article>
+
+          <aside class="sidebar">
+            <section class="summary-card">
+              <h2>In one paragraph</h2>
+              <p>
+                SentinelStream is a cloud-native, event-driven fraud detection
+                and analyst decision-support platform that evolved through real
+                infrastructure setbacks, deep systems debugging, a local
+                Kubernetes fallback path, and a Windows desktop product shell.
+              </p>
+            </section>
+
+            <section class="summary-card">
+              <h2>Milestone highlights</h2>
+              <ul>
+                <li>Hybrid rules + ML decision pipeline</li>
+                <li>Terraform, Helm, Kubernetes, and CI/CD integration</li>
+                <li>Postgres, Redis, and Redpanda demo-data stack</li>
+                <li>Analyst-facing review console</li>
+                <li>Windows installer and portable desktop app builds</li>
+              </ul>
+            </section>
+
+            <section class="link-card">
+              <h2>Archive links</h2>
+              <ul>
+                <li><a href="./sentinelstream-milestone.md">Full article in Markdown</a></li>
+                <li><a href="../architecture.md">Platform architecture notes</a></li>
+                <li><a href="../deployment.md">Deployment documentation</a></li>
+                <li><a href="../desktop-store-release.html">Desktop store release plan</a></li>
+              </ul>
+            </section>
+
+            <section class="link-card">
+              <h2>Suggested tags</h2>
+              <div class="tag-list">
+                <span class="pill">Software Engineering</span>
+                <span class="pill">Cybersecurity</span>
+                <span class="pill">Fraud Detection</span>
+                <span class="pill">Microservices</span>
+                <span class="pill">Kubernetes</span>
+                <span class="pill">Python</span>
+                <span class="pill">DevOps</span>
+                <span class="pill">Product Engineering</span>
+              </div>
+            </section>
+          </aside>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div class="footer-inner">
+          Built as a public milestone archive for SentinelStream. Best next visual
+          additions: architecture diagram, analyst-console screenshot, desktop-app
+          screenshot, and a compact deployment timeline.
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

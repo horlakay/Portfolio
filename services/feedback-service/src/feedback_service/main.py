@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -75,12 +76,16 @@ class AppState:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     state = AppState(get_common_settings())
     app.state.container = state
-    async with state.engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    await state.producer.start()
-    yield
-    await state.producer.stop()
-    await state.engine.dispose()
+    try:
+        async with state.engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        await state.producer.start()
+        yield
+    finally:
+        with contextlib.suppress(Exception):
+            await state.producer.stop()
+        with contextlib.suppress(Exception):
+            await state.engine.dispose()
 
 
 app = build_app(get_common_settings())

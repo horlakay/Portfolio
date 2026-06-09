@@ -521,18 +521,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         fault=FaultConfig(),
     )
     app.state.container = state
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
-    await producer.start()
-    state.consumer_task = asyncio.create_task(consume_forever(app))
-    yield
-    if state.consumer_task:
-        state.consumer_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await state.consumer_task
-    await producer.stop()
-    await redis.aclose()
-    await engine.dispose()
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        await producer.start()
+        state.consumer_task = asyncio.create_task(consume_forever(app))
+        yield
+    finally:
+        if state.consumer_task:
+            state.consumer_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await state.consumer_task
+        with contextlib.suppress(Exception):
+            await producer.stop()
+        with contextlib.suppress(Exception):
+            await consumer.stop()
+        with contextlib.suppress(Exception):
+            await redis.aclose()
+        with contextlib.suppress(Exception):
+            await engine.dispose()
 
 
 app = build_app(get_common_settings())

@@ -9,6 +9,8 @@ pytest-cache-files-*/
 .mypy_cache/
 .codex-tmp/
 .codex-pydeps/
+.codex-docker-config/
+.tmp-ci-logs/
 *.pyc
 *.pyo
 *.pyd
@@ -22,6 +24,7 @@ htmlcov/
 dist/
 build/
 node_modules/
+apps/analyst-desktop/release/
 .env
 data/synthetic/*.csv
 training/models/**/*.joblib
@@ -39,3 +42,10 @@ override.tf.json
 tests/load/results/latest_benchmark.json
 tests/load/results/latest_model_benchmark.json
 tests/.artifacts/
+
+# Local run logs and scratch output (should never be committed)
+*.log
+local/
+backendstacks.log
+apps/analyst-desktop/desktop-stdout.log
+apps/analyst-desktop/desktop-stderr.log

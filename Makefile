@@ -7,11 +7,11 @@ LOCAL_RELEASE_NAME ?= sentinelstream
 LOCAL_IMAGE_REGISTRY ?= sentinelstream
 LOCAL_IMAGE_TAG ?= local
 LOCAL_POSTGRES_PASSWORD ?= sentinel
-LOCAL_JWT_SECRET ?= local-demo-jwt-secret
+LOCAL_JWT_SECRET ?= local-demo-jwt-secret-2026-please-change
 LOCAL_ANALYST_PASSWORD ?= demo-password
 LOCAL_DEMO_SERVICES := ingestion-service feature-service rule-engine model-service decision-service feedback-service analyst-console
 
-.PHONY: up down logs lint test validate-delivery benchmark benchmark-model demo demo-data train-models format seed helm-lint helm-template-dev helm-template-local helm-template-prod terraform-dev-init terraform-dev-plan terraform-prod-init terraform-prod-plan chaos-model-timeout chaos-model-reset chaos-feature-latency chaos-cache-disable chaos-feature-reset chaos-redis-down chaos-redis-up chaos-broker-down chaos-broker-up k8s-kind-create k8s-kind-delete k8s-local-build-images k8s-kind-load-images k8s-local-demo-data k8s-local-deploy k8s-local-status k8s-local-demo k8s-local-port-forward k8s-local-up
+.PHONY: up down logs lint test validate-delivery benchmark benchmark-model demo demo-data train-models format seed helm-lint helm-template-dev helm-template-local helm-template-prod terraform-dev-init terraform-dev-plan terraform-prod-init terraform-prod-plan chaos-model-timeout chaos-model-reset chaos-feature-latency chaos-cache-disable chaos-feature-reset chaos-redis-down chaos-redis-up chaos-broker-down chaos-broker-up k8s-kind-create k8s-kind-delete k8s-local-build-images k8s-kind-load-images k8s-local-demo-data k8s-local-deploy k8s-local-status k8s-local-demo k8s-local-port-forward k8s-local-up desktop-analyst-install desktop-analyst-dev desktop-analyst-pack
 
 up:
 	docker compose up -d --build
@@ -104,7 +104,9 @@ k8s-kind-load-images:
 k8s-local-demo-data:
 	kubectl create namespace "$(LOCAL_DATA_NAMESPACE)" --dry-run=client -o yaml | kubectl apply -f -
 	kubectl -n "$(LOCAL_DATA_NAMESPACE)" create secret generic sentinelstream-demo-data --from-literal=POSTGRES_PASSWORD="$(LOCAL_POSTGRES_PASSWORD)" --dry-run=client -o yaml | kubectl apply -f -
-	kubectl apply -k infra/kubernetes/demo-data
+	kubectl -n "$(LOCAL_DATA_NAMESPACE)" apply -f infra/kubernetes/demo-data/postgres.yaml
+	kubectl -n "$(LOCAL_DATA_NAMESPACE)" apply -f infra/kubernetes/demo-data/redis.yaml
+	kubectl -n "$(LOCAL_DATA_NAMESPACE)" apply -f infra/kubernetes/demo-data/redpanda.yaml
 	kubectl -n "$(LOCAL_DATA_NAMESPACE)" rollout status deployment/sentinelstream-dev-postgres --timeout=10m
 	kubectl -n "$(LOCAL_DATA_NAMESPACE)" rollout status deployment/sentinelstream-redis --timeout=5m
 	kubectl -n "$(LOCAL_DATA_NAMESPACE)" rollout status deployment/sentinelstream-dev-redpanda --timeout=10m
@@ -136,6 +138,15 @@ k8s-local-port-forward:
 	kubectl -n "$(LOCAL_NAMESPACE)" port-forward svc/$(LOCAL_RELEASE_NAME)-analyst-console 8007:8007
 
 k8s-local-up: k8s-kind-create k8s-local-build-images k8s-kind-load-images k8s-local-demo-data k8s-local-deploy
+
+desktop-analyst-install:
+	cd apps/analyst-desktop && npm install
+
+desktop-analyst-dev:
+	cd apps/analyst-desktop && npm run dev
+
+desktop-analyst-pack:
+	cd apps/analyst-desktop && npm run dist
 
 seed:
 	docker compose run --rm ingestion-service python scripts/seed_synthetic_data.py
